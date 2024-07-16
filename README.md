@@ -9,6 +9,12 @@
 poetry install
 ```
 
+# configure (optional)
+
+```
+poetry config virtualenvs.in-project true
+```
+
 # run
 
 ```
