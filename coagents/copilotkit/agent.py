@@ -63,7 +63,7 @@ class LangGraphAgent(Agent):
         new_state = self.graph.get_state(thread)
 
         return {
-            "agentThreadId": thread_id,
-            "agentState": new_state.values,
-            "agentRunning": new_state.next != ()
+            "threadId": thread_id,
+            "state": new_state.values,
+            "running": new_state.next != ()
         }

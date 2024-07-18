@@ -42,8 +42,8 @@ async def handler(request: Request, sdk: CopilotKitSDK):
             raise HTTPException(status_code=400, detail="Name is required")
 
         parameters = body.get("parameters", {})
-        state = body.get("agentState")
-        thread_id = body.get("agentThreadId")
+        state = body.get("state")
+        thread_id = body.get("threadId")
 
         return await handle_execute_action(
             sdk=sdk,

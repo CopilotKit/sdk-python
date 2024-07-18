@@ -50,13 +50,17 @@ builder.add_edge("greet_user", END)
 memory = MemorySaver()
 graph = builder.compile(checkpointer=memory)
 
+def greet(name):
+    """Greet the user"""
+    print("greeting user", name)
+    return f"{name} has been greeted."
 
 app = FastAPI()
 sdk = CopilotKitSDK(
     actions=[
         Action(
             name="greet",
-            handler=lambda name: f"Hello, {name}!",
+            handler=greet,
             description="Greet the User",
             parameters=[
                 {
