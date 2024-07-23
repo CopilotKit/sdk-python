@@ -58,6 +58,8 @@ class LangGraphAgent(Agent):
         else:
             thread_id = str(uuid.uuid4())
             thread = {"configurable": {"thread_id": thread_id}}
+            parameters = parameters if parameters is not None else {}
+            parameters["coagent"] = {}
             self.graph.invoke(parameters, thread, interrupt_after="*")
 
         new_state = self.graph.get_state(thread)
@@ -65,5 +67,43 @@ class LangGraphAgent(Agent):
         return {
             "threadId": thread_id,
             "state": new_state.values,
-            "running": new_state.next != ()
+            "running": new_state.next != (),
+            "name": self.name
         }
+
+def coagent_ask(state, question: str, key: str = None):
+    """Ask a question to the user"""
+    return {
+        **state,
+        "coagent": {
+            "execute": {
+                "name": "ask",
+                "arguments": {
+                    "question": question,                   
+                },
+                **({"key": key} if key is not None else {})
+            }
+        }
+    }
+
+def coagent_get_answer(state, key: str=None):
+    """Get the answer from the user"""
+    if key is not None:
+        if state["coagent"]["execute"]["key"] != key:
+            raise KeyError(f"Key {key} not found")
+    return state["coagent"]["execute"]["result"]["answer"]
+
+def coagent_send_message(state, message: str):
+    """Send a message to the user"""
+
+    return {
+        **state,
+        "coagent": {
+            "execute": {
+                "name": "message",
+                "arguments": {
+                    "text": message
+                }
+            }
+        }
+    }

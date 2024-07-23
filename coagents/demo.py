@@ -4,38 +4,49 @@ from typing import TypedDict
 from fastapi import FastAPI
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
-from .copilotkit import CopilotKitSDK, Action, LangGraphAgent, CopilotState
+from .copilotkit import CopilotKitSDK, Action, LangGraphAgent, CoagentState, \
+    coagent_ask, coagent_get_answer, coagent_send_message
 from .copilotkit.integrations.fastapi import add_fastapi_endpoint
 
 class State(TypedDict):
     """State"""
     name: str
-    copilot: CopilotState
+    coagent: CoagentState
+
 
 def ask_user_for_name(state):
     """Ask the user for their name"""
-    print("Hi, I'm your Co-Agent!")
-    return {
-        **state,
-        "copilot": {
-            "ask": {
-                "question": "What is your name?"
-            }
-        }
-    }
+    return coagent_ask(state, "What is your name?")
+    # return {
+    #     **state,
+    #     "coagent": {
+    #         "execute": {
+    #             "name": "ask",
+    #             "arguments": {
+    #                 "question": "What is your name?"
+    #             }
+    #         }
+    #     }
+    # }
 
 def greet_user(state):
     """Greet the user"""
-    name = state['copilot']['ask']['answer']
-    return {
-        **state,
-        "name": name,
-        "copilot": {
-            "message": {
-                "text": f"Hello {name}, how can I help you?"
-            }
-        }
-    }
+    name = coagent_get_answer(state)
+    state["name"] = name
+    return coagent_send_message(state, f"Hello {name}, how can I help you?")
+    # name = state['coagent']['execute']['result']['answer']
+    # return {
+    #     **state,
+    #     "name": name,
+    #     "coagent": {
+    #         "execute": {
+    #             "name": "message",
+    #             "arguments": {
+    #                 "text": f"Hello {name}, how can I help you?"
+    #             }
+    #         }
+    #     }
+    # }
 
 
 builder = StateGraph(State)

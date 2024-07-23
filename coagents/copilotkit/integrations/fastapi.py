@@ -36,7 +36,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
 
     if method == 'POST' and path == 'actions/list':
         return await handle_list_actions(sdk=sdk, context=context)
-    elif method == 'POST' and path == 'actions/execute':
+    elif method == 'POST' and path == 'actions/execute':        
         name = body.get("name")
         if name is None:
             raise HTTPException(status_code=400, detail="Name is required")
@@ -80,7 +80,7 @@ async def handle_execute_action(
             thread_id=thread_id
         )
         return JSONResponse(content=result)
-    except KeyError as _e:
+    except KeyError as _exc:
         return JSONResponse(content={"error": "Action not found"}, status_code=404)
     except RuntimeError as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=400)

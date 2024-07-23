@@ -38,11 +38,11 @@ curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: 
 # execute agent
 
 ```
-curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "askUser", "parameters": {"copilot": {}}}' | jq
+curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "askUser", "parameters": {}}' | jq
 ```
 
 # continue executing agent (!! replace threadId with the one from the previous response)
 
 ```
-curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "askUser", "threadId": "33785f49-5916-42f6-88e1-8c13fe203bae", "state": {"name":"","copilot":{"ask":{"question":"What is your name?","answer":"Markus"}}}}' | jq
+curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "askUser", "threadId": "ac75afdf-74bf-42f7-bf26-c50b69d31835", "state": {"name":"","copilot":{"ask":{"question":"What is your name?","answer":"Markus"}}}}' | jq
 ```

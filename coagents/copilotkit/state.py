@@ -11,7 +11,7 @@ class CopilotMessageState(TypedDict):
     """State for sending a message"""
     text: str
 
-class CopilotState(TypedDict):
+class CoagentState(TypedDict):
     """State for CopilotKit"""
     ask: Optional[CopilotAskState]
     message: Optional[CopilotMessageState]

@@ -1,7 +1,10 @@
 """CopilotKit SDK"""
 from .sdk import CopilotKitSDK
 from .action import Action
-from .agent import LangGraphAgent
-from .state import CopilotState
+from .agent import LangGraphAgent, coagent_ask, coagent_get_answer, coagent_send_message
+from .state import CoagentState
 
-__all__ = ['CopilotKitSDK', 'Action', 'LangGraphAgent', 'CopilotState']
+__all__ = [
+    'CopilotKitSDK', 'Action', 'LangGraphAgent', 'CoagentState', 'coagent_ask',
+    'coagent_get_answer', 'coagent_send_message'
+]
