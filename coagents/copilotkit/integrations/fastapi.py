@@ -27,7 +27,6 @@ async def handler(request: Request, sdk: CopilotKitSDK):
     try:
         body = await request.json()
     except Exception as exc:
-        print(exc)
         raise HTTPException(status_code=400, detail="Request body is required") from exc
 
     path = request.path_params.get('path')
@@ -44,6 +43,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
         parameters = body.get("parameters", {})
         state = body.get("state")
         thread_id = body.get("threadId")
+        node_name = body.get("nodeName")
 
         return await handle_execute_action(
             sdk=sdk,
@@ -51,7 +51,8 @@ async def handler(request: Request, sdk: CopilotKitSDK):
             name=name,
             parameters=parameters,
             state=state,
-            thread_id=thread_id
+            thread_id=thread_id,
+            node_name=node_name
         )
 
     raise HTTPException(status_code=404, detail="Not found")
@@ -68,7 +69,8 @@ async def handle_execute_action(
         name: str,
         parameters: dict,
         state: Optional[dict] = None,
-        thread_id: Optional[str] = None
+        thread_id: Optional[str] = None,
+        node_name: Optional[str] = None
     ):
     """Handle FastAPI request"""
     try:
@@ -77,10 +79,12 @@ async def handle_execute_action(
             name=name,
             parameters=parameters,
             state=state,
-            thread_id=thread_id
+            thread_id=thread_id,
+            node_name=node_name
         )
         return JSONResponse(content=result)
     except KeyError as _exc:
+        print(_exc)
         return JSONResponse(content={"error": "Action not found"}, status_code=404)
     except RuntimeError as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=400)

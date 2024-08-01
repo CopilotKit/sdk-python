@@ -66,11 +66,13 @@ class CopilotKitSDK:
             name: str,
             parameters: dict,
             state: Optional[Any] = None,
-            thread_id: Optional[str] = None
+            thread_id: Optional[str] = None,
+            node_name: Optional[str] = None
         ) -> dict:
         """Execute an action"""
 
         actions = self.get_actions(context)
+
         action_or_agent = next((action for action in actions if action.name == name), None)       
         if action_or_agent is None:
             raise KeyError("Action not found")
@@ -80,7 +82,7 @@ class CopilotKitSDK:
             result = await action.execute(parameters=parameters)
         elif isinstance(action_or_agent, Agent):
             agent = action_or_agent
-            result = await agent.run(parameters=parameters, state=state, thread_id=thread_id)
+            result = await agent.run(parameters=parameters, state=state, thread_id=thread_id, node_name=node_name)
         else:
             raise ValueError("Not implemented")
 
