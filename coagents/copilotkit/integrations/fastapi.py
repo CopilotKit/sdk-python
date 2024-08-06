@@ -35,7 +35,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
 
     if method == 'POST' and path == 'actions/list':
         return await handle_list_actions(sdk=sdk, context=context)
-    elif method == 'POST' and path == 'actions/execute':        
+    elif method == 'POST' and path == 'actions/execute':
         name = body.get("name")
         if name is None:
             raise HTTPException(status_code=400, detail="Name is required")

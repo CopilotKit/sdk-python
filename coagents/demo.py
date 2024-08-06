@@ -18,7 +18,7 @@ class State(TypedDict):
 def ask_user_for_name(state):
     """Ask the user for their name"""
     print("asking user for name", state)
-    if "confirmed" in state and not state["confirmed"]:
+    if "confirmed" in state and state["confirmed"] is False:
         return coagent_ask(state, "Come on, what is your real name? 🤨")
 
     return coagent_ask(state, "What is your name? 😊")
@@ -32,7 +32,7 @@ def confirm_user(state):
 def set_name_confirmed(state):
     """Set the name confirmed"""
     print("setting name confirmed", state)
-    state["confirmed"] = coagent_get_result(state)["confirmed"]
+    state["confirmed"] = coagent_get_result(state)
     return state
 
 def greet_user(state):
@@ -61,10 +61,8 @@ builder.add_node("greet_user", greet_user)
 builder.add_edge(START, "ask_user_for_name")
 builder.add_edge("ask_user_for_name", "confirm_user")
 builder.add_edge("confirm_user", "set_name_confirmed")
-builder.add_conditional_edges("set_name_confirmed", route_confirmed, {
-    "greet_user": "greet_user",
-    "ask_user_for_name": "ask_user_for_name"
-})
+builder.add_conditional_edges("set_name_confirmed", route_confirmed)
+
 builder.add_edge("greet_user", END)
 
 memory = MemorySaver()
