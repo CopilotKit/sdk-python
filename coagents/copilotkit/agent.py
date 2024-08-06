@@ -1,11 +1,10 @@
 """Agents"""
 
-import uuid
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from abc import ABC, abstractmethod
 from langgraph.graph.graph import CompiledGraph
-from .parameter import BaseParameter
-
+from langchain.load.dump import dumps as langchain_dumps
+from .parameter import BaseParameter, normalize_parameters
 
 class Agent(ABC):
     """Agent class for CopilotKit"""
@@ -20,15 +19,35 @@ class Agent(ABC):
         self.description = description
         self.parameters = parameters
 
+    # TODO: agents always get the full message history
+
     @abstractmethod
-    async def run(
+    async def start_execution(
         self,
         *,
-        thread_id: Optional[str] = None,
-        parameters: Optional[Dict] = None,
-        state: Optional[Any] = None
+        thread_id: str,
+        parameters: dict,
+        properties: dict
     ):
-        """Run the agent"""
+        """Start the execution of the agent"""
+
+    @abstractmethod
+    async def continue_execution(
+        self,
+        *,
+        thread_id: str,
+        state: dict,
+        properties: dict
+    ):
+        """Continue the execution of the agent"""
+
+    def dict_repr(self):
+        """Dict representation of the action"""
+        return {
+            'name': self.name,
+            'description': self.description or '',
+            'parameters': normalize_parameters(self.parameters),
+        }
 
 
 class LangGraphAgent(Agent):
@@ -37,97 +56,45 @@ class LangGraphAgent(Agent):
             self,
             *,
             name: str,
-            graph: CompiledGraph,
+            agent: CompiledGraph,
             description: Optional[str] = None,
             parameters: Optional[List[BaseParameter]] = None
         ):
         super().__init__(name=name, description=description, parameters=parameters)
-        self.graph = graph
+        self.agent = agent
 
-    async def run(
-            self,
-            *,
-            thread_id: Optional[str] = None,
-            parameters: Optional[Dict] = None,
-            state: Optional[Any] = None,
-            node_name: Optional[str] = None
-        ):
+    async def start_execution(
+        self,
+        *,
+        thread_id: str,
+        parameters: dict,
+        properties: dict
+    ):
+        config = {"configurable": {"thread_id": thread_id}}
+        async for event in self.agent.astream_events(parameters, config, version="v1"):            
+            yield langchain_dumps({"langgraph": event}) + "\n"
 
-        print("got node name:", node_name)
+    async def continue_execution(
+        self,
+        *,
+        thread_id: str,
+        state: dict,
+        properties: dict
+    ):
+        config = {"configurable": {"thread_id": thread_id}}
 
-        if thread_id:
-            thread = {"configurable": {"thread_id": thread_id}}
-            self.graph.update_state(thread, state if state is not None else {}, as_node=node_name)
-            self.graph.invoke(None, thread, interrupt_after="*")
-        else:
-            thread_id = str(uuid.uuid4())
-            thread = {"configurable": {"thread_id": thread_id}}
-            parameters = parameters if parameters is not None else {}
-            parameters["coagent"] = {}
-            self.graph.invoke(parameters, thread, interrupt_after="*")
+        node_name = properties.get("node_name")
+        if node_name is None:
+            raise ValueError("Node name is required")
 
-        new_state = self.graph.get_state(thread)
-        new_node_name= list(new_state.metadata["writes"].keys())[0]
+        self.agent.update_state(config, state, as_node=node_name)
 
-        print("sending node name:", new_node_name)
+        for event in self.agent.astream_events(None, config, version="v1"):
+            yield langchain_dumps({"langgraph": event}) + "\n"
 
+    def dict_repr(self):
+        super_repr = super().dict_repr()
         return {
-            "threadId": thread_id,
-            "nodeName": new_node_name,
-            "state": new_state.values,
-            "running": new_state.next != (),
-            "name": self.name,
+            **super_repr,
+            'type': 'langgraph'
         }
-
-def coagent_ask(state, question: str, key: str = None):
-    """Ask a question to the user"""
-    return {
-        **state,
-        "coagent": {
-            "execute": {
-                "name": "ask",
-                "arguments": {
-                    "question": question,                   
-                },
-                **({"key": key} if key is not None else {})
-            }
-        }
-    }
-
-def coagent_get_answer(state, key: str=None):
-    """Get the answer from the user"""
-    if key is not None:
-        if state["coagent"]["execute"]["key"] != key:
-            raise KeyError(f"Key {key} not found")
-    return state["coagent"]["execute"]["result"]["answer"]
-
-def coagent_send_message(state, message: str):
-    """Send a message to the user"""
-
-    return {
-        **state,
-        "coagent": {
-            "execute": {
-                "name": "message",
-                "arguments": {
-                    "text": message
-                }
-            }
-        }
-    }
-
-def coagent_execute(state, name: str, arguments: Dict):
-    """Execute an action"""
-    return {
-        **state,
-        "coagent": {
-            "execute": {
-                "name": name,
-                "arguments": arguments
-            }
-        }
-    }
-
-def coagent_get_result(state):
-    """Get the result of the action"""
-    return state["coagent"]["execute"]["result"]

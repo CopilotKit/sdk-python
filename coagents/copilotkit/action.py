@@ -1,8 +1,8 @@
 """Actions"""
 
-import inspect
+from inspect import iscoroutinefunction
 from typing import Optional, List, Callable
-from .parameter import BaseParameter
+from .parameter import BaseParameter, normalize_parameters
 
 class Action:  # pylint: disable=too-few-public-methods
     """Action class for CopilotKit"""
@@ -25,12 +25,16 @@ class Action:  # pylint: disable=too-few-public-methods
             parameters: dict
         ) -> dict:
         """Execute the action"""
-        try:
-            if inspect.iscoroutinefunction(self.handler):
-                result = await self.handler(**parameters)
-            else:
-                result = self.handler(**parameters)
-        except Exception as exc:
-            message = str(exc).removeprefix('<lambda>()')
-            raise RuntimeError(message) from exc
-        return {"result": result}
+        result = self.handler(**parameters)
+
+        return {
+            "result": await result if iscoroutinefunction(self.handler) else result
+        }
+
+    def dict_repr(self):
+        """Dict representation of the action"""
+        return {
+            'name': self.name,
+            'description': self.description or '',
+            'parameters': normalize_parameters(self.parameters),
+        }

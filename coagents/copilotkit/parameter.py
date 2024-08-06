@@ -8,6 +8,26 @@ class BaseParameter(TypedDict):
     description: Optional[str]
     required: Optional[bool]
 
+
+def normalize_parameters(parameters: Optional[List[BaseParameter]]) -> List[BaseParameter]:
+    """Normalize the parameters to ensure they have the correct type and format."""
+    if parameters is None:
+        return []
+    return [_normalize_parameter(parameter) for parameter in parameters]
+
+def _normalize_parameter(parameter: BaseParameter) -> BaseParameter:
+    """Normalize a parameter to ensure it has the correct type and format."""
+    if not hasattr(parameter, 'type'):
+        parameter['type'] = 'string'
+    if not hasattr(parameter, 'required'):
+        parameter['required'] = False
+    if not hasattr(parameter, 'description'):
+        parameter['description'] = ''
+    
+    if parameter['type'] == 'object' or parameter['type'] == 'object[]':
+        parameter['attributes'] = normalize_parameters(parameter.get('attributes'))
+    return parameter
+
 class StringParameter(BaseParameter):
     """String parameter class"""
     type: Literal["string"]

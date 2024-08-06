@@ -10,8 +10,13 @@ python = "^3.12"
 langgraph = "^0.1.19"
 httpx = "^0.27.0"
 fastapi = "^0.111.1"
+langchain = "^0.2.12"
+langchain-openai = "^0.1.20"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+demo = "coagents.demo:main"

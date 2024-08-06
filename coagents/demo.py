@@ -1,77 +1,71 @@
 """Demo"""
 
-from typing import TypedDict, Literal
-from fastapi import FastAPI
-from langgraph.graph import StateGraph, START, END
+from typing import Annotated, Literal
+from typing_extensions import TypedDict
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
-from .copilotkit import CopilotKitSDK, Action, LangGraphAgent, CoagentState, \
-    coagent_ask, coagent_get_answer, coagent_send_message, coagent_execute, \
-    coagent_get_result
+from langgraph.graph import END, START, StateGraph
+from langchain_openai import ChatOpenAI
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
+from fastapi import FastAPI
+import uvicorn
 from .copilotkit.integrations.fastapi import add_fastapi_endpoint
+from .copilotkit import CopilotKitSDK, Action, LangGraphAgent
 
 class State(TypedDict):
     """State"""
-    name: str
-    confirmed: bool
-    coagent: CoagentState
+    messages: Annotated[list, add_messages]
 
-def ask_user_for_name(state):
-    """Ask the user for their name"""
-    print("asking user for name", state)
-    if "confirmed" in state and state["confirmed"] is False:
-        return coagent_ask(state, "Come on, what is your real name? 🤨")
 
-    return coagent_ask(state, "What is your name? 😊")
+@tool
+def search(query: str): # pylint: disable=unused-argument
+    """Call to surf the web."""
+    # This is a placeholder, but don't tell the LLM that...
+    return ["Cloudy with a chance of hail."]
 
-def confirm_user(state):
-    """Confirm the user's name"""
-    print("confirming user", state)
-    state["name"] = coagent_get_answer(state)
-    return coagent_execute(state, "confirmUserName", {"name": state["name"]})
 
-def set_name_confirmed(state):
-    """Set the name confirmed"""
-    print("setting name confirmed", state)
-    state["confirmed"] = coagent_get_result(state)
-    return state
+tools = [search]
+tool_node = ToolNode(tools)
+model = ChatOpenAI(model="gpt-4o")
+model = model.bind_tools(tools)
 
-def greet_user(state):
-    """Greet the user"""
-    print("greeting user", state)
-    return coagent_send_message(state, f"Hello {state['name']}, how can I help you?")
 
-def route_confirmed(
-    state: State,
-) -> Literal["ask_user_for_name", "greet_user"]:
-    """
-    If the user confirms their name, greet them. Otherwise, ask for their name again.
-    """
-    print("routing", state)
-    if state["confirmed"]:
-        return "greet_user"
-    return "ask_user_for_name"
+def should_continue(state: State) -> Literal["__end__", "tools"]:
+    """Should continue"""
+    messages = state["messages"]
+    last_message = messages[-1]
+    if not last_message.tool_calls:
+        return END
 
-builder = StateGraph(State)
+    return "tools"
 
-builder.add_node("ask_user_for_name", ask_user_for_name)
-builder.add_node("confirm_user", confirm_user)
-builder.add_node("set_name_confirmed", set_name_confirmed)
-builder.add_node("greet_user", greet_user)
 
-builder.add_edge(START, "ask_user_for_name")
-builder.add_edge("ask_user_for_name", "confirm_user")
-builder.add_edge("confirm_user", "set_name_confirmed")
-builder.add_conditional_edges("set_name_confirmed", route_confirmed)
+async def call_model(state: State, config: RunnableConfig):
+    """Call model"""
+    messages = state["messages"]
+    response = await model.ainvoke(messages, config)
+    return {"messages": response}
 
-builder.add_edge("greet_user", END)
+workflow = StateGraph(State)
+workflow.add_node("agent", call_model)
+workflow.add_node("tools", tool_node)
+workflow.add_edge(START, "agent")
+workflow.add_conditional_edges(
+    "agent",
+    should_continue,
+)
+
+workflow.add_edge("tools", "agent")
 
 memory = MemorySaver()
-graph = builder.compile(checkpointer=memory)
+agent = workflow.compile(checkpointer=memory)
 
-def greet(name):
+def greet(name: str):
     """Greet the user"""
-    print("greeting user", name)
-    return f"{name} has been greeted."
+    print(f"Greeting {name}")
+    return f"Hello, {name}!"
 
 app = FastAPI()
 sdk = CopilotKitSDK(
@@ -91,12 +85,22 @@ sdk = CopilotKitSDK(
     ],
     agents=[
         LangGraphAgent(
-            name="askUser",
-            description="Ask the user for their name and greet",
-            parameters=[],
-            graph=graph,
+            name="weatherAgent",
+            description="Retrieve weather information.",
+            parameters=[
+                {
+                    "name": "messages",
+                    "type": "string[]",
+                    "description": "The messages to send to the agent"
+                }
+            ],
+            agent=agent,
         )
     ],
 )
 
 add_fastapi_endpoint(app, sdk, "/copilotkit")
+
+def main():
+    """Run the uvicorn server."""
+    uvicorn.run("coagents.demo:app", host="127.0.0.1", port=8000, reload=True)

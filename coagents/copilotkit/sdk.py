@@ -3,6 +3,12 @@
 from typing import List, Callable, Union, Optional, TypedDict, Any
 from .agent import Agent
 from .action import Action
+from .exc import (
+    ActionNotFoundException,
+    AgentNotFoundException,
+    ActionExecutionException,
+    AgentExecutionException
+)
 
 
 class CopilotKitSDKContext(TypedDict):
@@ -18,72 +24,106 @@ class CopilotKitSDK:
         actions: Optional[Union[List[Action], Callable[[], List[Action]]]] = None,
         agents: Optional[Union[List[Agent], Callable[[], List[Agent]]]] = None,
     ):
-        self.agents = agents
-        self.actions = actions
+        self.agents = agents or []
+        self.actions = actions or []
 
-    def get_actions(
-        self,
-        *
-        context: CopilotKitSDKContext
-    ) -> List[Union[Action, Agent]]:
-        """Get all available actions"""
-        result = []
-        if self.actions:
-            if callable(self.actions):
-                result.extend(self.actions(context))
-            else:
-                result.extend(self.actions)
-        if self.agents:
-            if callable(self.agents):
-                result.extend(self.agents(context))
-            else:
-                result.extend(self.agents)
-        return result
-
-    def list_actions(
+    def info(
         self,
         *,
         context: CopilotKitSDKContext
-    ) -> List[Any]:
-        """List all available actions and agents"""
+    ) -> List[Union[Action, Agent]]:
+        """Returns information about available actions and agents"""
 
-        result = self.get_actions(context)
-        actions =  [
-            {
-                "name": item.name,
-                "description": item.description,
-                "parameters": item.parameters if item.parameters is not None else []
-            }
-            for item in result
-        ]
-        return {"actions": actions}
+        actions = self.actions(context) if callable(self.actions) else self.actions
+        agents = self.agents(context) if callable(self.agents) else self.agents
 
+        result = {
+            "actions": [action.dict_repr() for action in actions],
+            "agents": [agent.dict_repr() for agent in agents]
+        }
+        print(result)
+        return result
+    
+    def _get_action(
+        self,
+        *,
+        context: CopilotKitSDKContext,
+        name: str,
+    ) -> Action:
+        """Get an action by name"""
+        actions = self.actions(context) if callable(self.actions) else self.actions
+        action = next((action for action in actions if action.name == name), None)
+        if action is None:
+            raise ActionNotFoundException(name)
+        return action
 
-    async def execute_action(
+    def execute_action(
             self,
             *,
             context: CopilotKitSDKContext,
             name: str,
             parameters: dict,
-            state: Optional[Any] = None,
-            thread_id: Optional[str] = None,
-            node_name: Optional[str] = None
-        ) -> dict:
+    ) -> dict:
         """Execute an action"""
 
-        actions = self.get_actions(context)
+        action = self._get_action(context=context, name=name)
 
-        action_or_agent = next((action for action in actions if action.name == name), None)       
-        if action_or_agent is None:
-            raise KeyError("Action not found")
+        try:
+            return action.execute(parameters=parameters)
+        except Exception as error:
+            raise ActionExecutionException(name, error) from error
 
-        if isinstance(action_or_agent, Action):
-            action = action_or_agent
-            result = await action.execute(parameters=parameters)
-        elif isinstance(action_or_agent, Agent):
-            agent = action_or_agent
-            result = await agent.run(parameters=parameters, state=state, thread_id=thread_id, node_name=node_name)
-        else:
-            raise ValueError("Not implemented")
+    def _get_agent(
+        self,
+        *,
+        context: CopilotKitSDKContext,
+        name: str,
+    ) -> Agent:
+        """Get an agent by name"""
+        agents = self.agents(context) if callable(self.agents) else self.agents
+        agent = next((agent for agent in agents if agent.name == name), None)
+        if agent is None:
+            raise AgentNotFoundException(name)
+        return agent
 
-        return result
+    def start_agent_execution( # pylint: disable=too-many-arguments
+        self,
+        *,
+        context: CopilotKitSDKContext,
+        name: str,
+        thread_id: str,
+        parameters: dict,
+        properties: dict,
+    ):
+        """Start an agent execution"""
+        agent = self._get_agent(context=context, name=name)
+
+        try:
+            return agent.start_execution(
+                thread_id=thread_id,
+                parameters=parameters,
+                properties=properties,
+            )
+        except Exception as error:
+            raise AgentExecutionException(name, error) from error
+
+    def continue_agent_execution( # pylint: disable=too-many-arguments
+        self,
+        *,
+        context: CopilotKitSDKContext,
+        name: str,
+        thread_id: str,
+        state: dict,
+        properties: dict,
+    ):
+        """Continue an agent execution"""
+        agent = self._get_agent(context=context, name=name)
+
+        try:
+            return agent.continue_execution(
+                thread_id=thread_id,
+                state=state,
+                properties=properties,
+            )
+        except Exception as error:
+            raise AgentExecutionException(name, error) from error

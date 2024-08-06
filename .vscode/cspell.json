@@ -7,6 +7,12 @@
     "copilotkit",
     "checkpointer",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "serializeable",
+    "astream",
+    "langchain",
+    "openai",
+    "ainvoke",
+    "readables"
   ]
 }
