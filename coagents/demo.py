@@ -17,6 +17,7 @@ from .copilotkit import CopilotKitSDK, Action, LangGraphAgent
 class State(TypedDict):
     """State"""
     messages: Annotated[list, add_messages]
+    test_property_xxx: str
 
 
 @tool
@@ -62,23 +63,23 @@ workflow.add_edge("tools", "agent")
 memory = MemorySaver()
 agent = workflow.compile(checkpointer=memory)
 
-def greet(name: str):
-    """Greet the user"""
-    print(f"Greeting {name}")
-    return f"Hello, {name}!"
+def check_weather(city: str):
+    """Check the weather"""
+    print(f"Checking weather for {city}")
+    return f"The weather in {city} is Cloudy with a chance of hail."
 
 app = FastAPI()
 sdk = CopilotKitSDK(
     actions=[
         Action(
-            name="greet",
-            handler=greet,
-            description="Greet the User",
+            name="checkWeather",
+            handler=check_weather,
+            description="Check the weather",
             parameters=[
                 {
-                    "name": "name",
+                    "name": "city",
                     "type": "string",
-                    "description": "The name to greet"
+                    "description": "The city to check the weather for"
                 }
             ]
         )

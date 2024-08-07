@@ -71,6 +71,7 @@ class LangGraphAgent(Agent):
         properties: dict
     ):
         config = {"configurable": {"thread_id": thread_id}}
+        parameters = {**parameters, **{"test_property_xxx": "_____________________"}}
         async for event in self.agent.astream_events(parameters, config, version="v1"):            
             yield langchain_dumps({"langgraph": event}) + "\n"
 
