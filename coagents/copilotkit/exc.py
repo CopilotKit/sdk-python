@@ -1,7 +1,5 @@
 """Exceptions for CopilotKit."""
 
-import traceback
-
 class ActionNotFoundException(Exception):
     """Exception raised when an action or agent is not found."""
 
