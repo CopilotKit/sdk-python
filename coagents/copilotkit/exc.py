@@ -1,5 +1,7 @@
 """Exceptions for CopilotKit."""
 
+import traceback
+
 class ActionNotFoundException(Exception):
     """Exception raised when an action or agent is not found."""
 
@@ -29,4 +31,3 @@ class AgentExecutionException(Exception):
         self.name = name
         self.error = error
         super().__init__(f"Agent '{name}' failed to execute: {error}")
-  

@@ -22,10 +22,10 @@ class Action:  # pylint: disable=too-few-public-methods
     async def execute(
             self,
             *,
-            parameters: dict
+            arguments: dict
         ) -> dict:
         """Execute the action"""
-        result = self.handler(**parameters)
+        result = self.handler(**arguments)
 
         return {
             "result": await result if iscoroutinefunction(self.handler) else result

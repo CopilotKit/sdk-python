@@ -1,23 +1,20 @@
 """Demo"""
 
-from typing import Annotated, Literal
-from typing_extensions import TypedDict
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import START, StateGraph, MessagesState
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from fastapi import FastAPI
 import uvicorn
 from .copilotkit.integrations.fastapi import add_fastapi_endpoint
-from .copilotkit import CopilotKitSDK, Action, LangGraphAgent
+from .copilotkit import CopilotKitSDK, LangGraphAgent
 
-class State(TypedDict):
+class State(MessagesState):
     """State"""
-    messages: Annotated[list, add_messages]
-    test_property_xxx: str
+    # custom state here
 
 
 @tool
@@ -26,75 +23,57 @@ def search(query: str): # pylint: disable=unused-argument
     # This is a placeholder, but don't tell the LLM that...
     return ["Cloudy with a chance of hail."]
 
-
 tools = [search]
 tool_node = ToolNode(tools)
+
 model = ChatOpenAI(model="gpt-4o")
 model = model.bind_tools(tools)
 
 
-def should_continue(state: State) -> Literal["__end__", "tools"]:
-    """Should continue"""
-    messages = state["messages"]
-    last_message = messages[-1]
-    if not last_message.tool_calls:
-        return END
-
-    return "tools"
-
-
-async def call_model(state: State, config: RunnableConfig):
-    """Call model"""
-    messages = state["messages"]
-    response = await model.ainvoke(messages, config)
+async def ask_user_where_from(state: State, config: RunnableConfig): # pylint: disable=unused-argument
+    """Ask the human where they are from"""
+    response = await ChatOpenAI(model="gpt-4o").ainvoke([
+        *state["messages"],
+        SystemMessage(
+            content="Ask the user where they are from in a funny way."
+        )
+    ], config)
     return {"messages": response}
 
+async def call_model(state: State):
+    """Call model"""
+    messages = state["messages"]
+    response = await model.ainvoke(messages)
+    # We return a list, because this will get added to the existing list
+    return {"messages": response}
+
+
+
 workflow = StateGraph(State)
+
+workflow.add_node("ask_user_where_from", ask_user_where_from)
 workflow.add_node("agent", call_model)
 workflow.add_node("tools", tool_node)
-workflow.add_edge(START, "agent")
-workflow.add_conditional_edges(
-    "agent",
-    should_continue,
-)
 
+# Set the entrypoint as `agent`
+# This means that this node is the first one called
+workflow.add_edge(START, "ask_user_where_from")
+workflow.add_edge("ask_user_where_from", "agent")
+
+# We now add a conditional edge
+workflow.add_conditional_edges("agent", tools_condition)
 workflow.add_edge("tools", "agent")
 
 memory = MemorySaver()
-agent = workflow.compile(checkpointer=memory)
-
-def check_weather(city: str):
-    """Check the weather"""
-    print(f"Checking weather for {city}")
-    return f"The weather in {city} is Cloudy with a chance of hail."
+agent = workflow.compile(checkpointer=memory, interrupt_after=["ask_user_where_from"])
 
 app = FastAPI()
 sdk = CopilotKitSDK(
-    actions=[
-        Action(
-            name="checkWeather",
-            handler=check_weather,
-            description="Check the weather",
-            parameters=[
-                {
-                    "name": "city",
-                    "type": "string",
-                    "description": "The city to check the weather for"
-                }
-            ]
-        )
-    ],
     agents=[
         LangGraphAgent(
             name="weatherAgent",
             description="Retrieve weather information.",
-            parameters=[
-                {
-                    "name": "messages",
-                    "type": "string[]",
-                    "description": "The messages to send to the agent"
-                }
-            ],
+            parameters=[],
             agent=agent,
         )
     ],
