@@ -37,7 +37,7 @@ def check_location(state: State, config: RunnableConfig):
     """Check the location"""
 
     # do not stream back to copilotkit
-    config = configure_copilotkit(config, call_actions=True)
+    config = configure_copilotkit(config, hidden=True)
 
     model = ChatOpenAI(model="gpt-4o").bind_tools([LocationData], tool_choice="LocationData")
 
