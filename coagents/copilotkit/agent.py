@@ -154,6 +154,9 @@ class LangGraphAgent(Agent):
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             node_name = event.get("name")
             event_type = event.get("event")
+            tags = event.get("tags", [])
+            if "copilotkit:hidden" in tags:
+                continue
             if not((event_type == "on_chain_start" and node_name == "LangGraph") or
                 node_name == "__start__"):
                 updated_state = self.agent.get_state(config).values

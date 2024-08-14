@@ -1,5 +1,6 @@
 """Demo"""
 
+from typing import TypedDict
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import START, StateGraph, MessagesState
@@ -11,26 +12,50 @@ from fastapi import FastAPI
 import uvicorn
 from .copilotkit.integrations.fastapi import add_fastapi_endpoint
 from .copilotkit import CopilotKitSDK, LangGraphAgent
+from .copilotkit.langchain import configure_copilotkit
 
 class State(MessagesState):
     """State"""
-    # custom state here
+    location: str
 
 
-@tool
+class LocationData(TypedDict):
+    """Data structure for user location data"""
+    location: str
+
+@tool()
 def search(query: str): # pylint: disable=unused-argument
     """Call to surf the web."""
     # This is a placeholder, but don't tell the LLM that...
-    return ["Cloudy with a chance of hail."]
+    return "Cloudy with a chance of hail."
+
 
 tools = [search]
 tool_node = ToolNode(tools)
 
-model = ChatOpenAI(model="gpt-4o")
-model = model.bind_tools(tools)
+def check_location(state: State, config: RunnableConfig):
+    """Check the location"""
 
+    # do not stream back to copilotkit
+    config = configure_copilotkit(config, call_actions=True)
 
-async def ask_user_where_from(state: State, config: RunnableConfig): # pylint: disable=unused-argument
+    model = ChatOpenAI(model="gpt-4o").bind_tools([LocationData], tool_choice="LocationData")
+
+    response = model.invoke([
+        *state["messages"],
+        SystemMessage(
+            content=("We want to know where the user is from. " +
+                     "Try to figure out the location from the user's messages if " +
+                     "possible. Otherwise, set it to unknown.")
+        )
+    ], config)
+    try:
+        location = response.tool_calls[0]['args']['location']
+        return {"location": location} if location != 'unknown' else None
+    except (IndexError, KeyError):
+        return None
+
+async def ask_user_location(state: State, config: RunnableConfig): # pylint: disable=unused-argument
     """Ask the human where they are from"""
     response = await ChatOpenAI(model="gpt-4o").ainvoke([
         *state["messages"],
@@ -40,32 +65,39 @@ async def ask_user_where_from(state: State, config: RunnableConfig): # pylint: d
     ], config)
     return {"messages": response}
 
-async def call_model(state: State):
+async def chatbot(state: State):
     """Call model"""
+    model = ChatOpenAI(model="gpt-4o")
+    model = model.bind_tools(tools)
     messages = state["messages"]
     response = await model.ainvoke(messages)
     # We return a list, because this will get added to the existing list
     return {"messages": response}
 
 
+def route_location(state: State):
+    """Route the location"""
+    if state.get("location"):
+        return "chatbot"
+    return "ask_user_location"
+
 
 workflow = StateGraph(State)
 
-workflow.add_node("ask_user_where_from", ask_user_where_from)
-workflow.add_node("agent", call_model)
+workflow.add_node("check_location", check_location)
+workflow.add_node("ask_user_location", ask_user_location)
+workflow.add_node("chatbot", chatbot)
 workflow.add_node("tools", tool_node)
 
-# Set the entrypoint as `agent`
-# This means that this node is the first one called
-workflow.add_edge(START, "ask_user_where_from")
-workflow.add_edge("ask_user_where_from", "agent")
 
-# We now add a conditional edge
-workflow.add_conditional_edges("agent", tools_condition)
-workflow.add_edge("tools", "agent")
+workflow.add_edge(START, "check_location")
+workflow.add_conditional_edges("check_location", route_location)
+workflow.add_edge("ask_user_location", "check_location")
+workflow.add_conditional_edges("chatbot", tools_condition)
+workflow.add_edge("tools", "chatbot")
 
 memory = MemorySaver()
-agent = workflow.compile(checkpointer=memory, interrupt_after=["ask_user_where_from"])
+agent = workflow.compile(checkpointer=memory, interrupt_after=["ask_user_location"])
 
 app = FastAPI()
 sdk = CopilotKitSDK(

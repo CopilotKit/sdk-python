@@ -2,7 +2,7 @@
 LangChain specific utilities for CopilotKit
 """
 
-from typing import List
+from typing import List, Optional
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
@@ -10,8 +10,10 @@ from langchain_core.messages import (
     AIMessage,
     ToolMessage
 )
-from .types import Message
+from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import ensure_config
 
+from .types import Message
 def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessage]:
     """
     Convert CopilotKit messages to LangChain messages
@@ -40,3 +42,20 @@ def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessag
                 tool_call_id=message["actionExecutionId"]
             ))
     return result
+
+def configure_copilotkit(
+        config: Optional[RunnableConfig] = None,
+        *,
+        call_actions: bool = False,
+        hidden: bool = True
+    ):
+    """
+    Configure for LangChain for use in CopilotKit
+    """
+    tags = config.get("tags", []) if config else []
+    if call_actions:
+        tags.append("copilotkit:call-actions")
+    if hidden:
+        tags.append("copilotkit:hidden")
+    config = ensure_config((config or {}) | {"tags": tags})
+    return config
