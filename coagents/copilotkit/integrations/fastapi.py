@@ -1,8 +1,6 @@
 """FastAPI integration"""
 
-import uuid
 from typing import List
-from inspect import iscoroutinefunction
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from ..sdk import CopilotKitSDK, CopilotKitSDKContext
@@ -63,33 +61,15 @@ async def handler(request: Request, sdk: CopilotKitSDK):
             arguments=arguments,
         )
 
-    if method == 'POST' and path == 'agents/start':
+    if method == 'POST' and path == 'agents/execute':
+        thread_id = body.get("threadId")
+        node_name = body.get("nodeName")
+
         name = body_get_or_raise(body, "name")
-        arguments = body_get_or_raise(body, "arguments")
+        state = body_get_or_raise(body, "state")
         messages = body_get_or_raise(body, "messages")
-        # properties = body.get("properties", {})
-        thread_id = str(uuid.uuid4())
 
-        result = await handle_start_agent_execution(
-            sdk=sdk,
-            context=context,
-            name=name,
-            thread_id=thread_id,
-            arguments=arguments,
-            messages=messages,
-        )
-
-        return await result if iscoroutinefunction(result) else result
-
-    if method == 'POST' and path == 'agents/continue':
-        thread_id = body_get_or_raise(body, "threadId")
-        node_name = body_get_or_raise(body, "nodeName")
-        name = body_get_or_raise(body, "name")
-        state = body.get("state", {})
-        # properties = body.get("properties", {})
-        messages = body.get("messages", [])
-
-        result = handle_continue_agent_execution(
+        return handle_execute_agent(
             sdk=sdk,
             context=context,
             thread_id=thread_id,
@@ -99,7 +79,6 @@ async def handler(request: Request, sdk: CopilotKitSDK):
             messages=messages,
         )
 
-        return await result if iscoroutinefunction(result) else result
 
     raise HTTPException(status_code=404, detail="Not found")
 
@@ -129,32 +108,7 @@ async def handle_execute_action(
     except ActionExecutionException as exc:
         return JSONResponse(content={"error": str(exc)}, status_code=500)
 
-async def handle_start_agent_execution( # pylint: disable=too-many-arguments
-        *,
-        sdk: CopilotKitSDK,
-        context: CopilotKitSDKContext,
-        name: str,
-        thread_id: str,
-        arguments: dict,
-        messages: List[Message],
-    ):
-    """Handle start agent request with FastAPI"""
-    try:
-        events = sdk.start_agent_execution(
-            context=context,
-            name=name,
-            thread_id=thread_id,
-            arguments=arguments,
-            messages=messages,
-        )
-        return StreamingResponse(events, media_type="application/json")
-    except AgentNotFoundException as exc:
-        return JSONResponse(content={"error": str(exc)}, status_code=404)
-    except AgentExecutionException as exc:
-        return JSONResponse(content={"error": str(exc)}, status_code=500)
-
-
-def handle_continue_agent_execution( # pylint: disable=too-many-arguments
+def handle_execute_agent( # pylint: disable=too-many-arguments
         *,
         sdk: CopilotKitSDK,
         context: CopilotKitSDKContext,
@@ -166,7 +120,7 @@ def handle_continue_agent_execution( # pylint: disable=too-many-arguments
     ):
     """Handle continue agent execution request with FastAPI"""
     try:
-        events = sdk.continue_agent_execution(
+        events = sdk.execute_agent(
             context=context,
             thread_id=thread_id,
             name=name,

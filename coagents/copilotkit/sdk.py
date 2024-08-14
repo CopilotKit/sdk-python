@@ -73,41 +73,7 @@ class CopilotKitSDK:
         except Exception as error:
             raise ActionExecutionException(name, error) from error
 
-    def _get_agent(
-        self,
-        *,
-        context: CopilotKitSDKContext,
-        name: str,
-    ) -> Agent:
-        """Get an agent by name"""
-        agents = self.agents(context) if callable(self.agents) else self.agents
-        agent = next((agent for agent in agents if agent.name == name), None)
-        if agent is None:
-            raise AgentNotFoundException(name)
-        return agent
-
-    def start_agent_execution( # pylint: disable=too-many-arguments
-        self,
-        *,
-        context: CopilotKitSDKContext,
-        name: str,
-        thread_id: str,
-        arguments: dict,
-        messages: List[Message],
-    ):
-        """Start an agent execution"""
-        agent = self._get_agent(context=context, name=name)        
-
-        try:
-            return agent.start_execution(
-                thread_id=thread_id,
-                arguments=arguments,
-                messages=messages,
-            )
-        except Exception as error:           
-            raise AgentExecutionException(name, error) from error
-
-    def continue_agent_execution( # pylint: disable=too-many-arguments
+    def execute_agent( # pylint: disable=too-many-arguments
         self,
         *,
         context: CopilotKitSDKContext,
@@ -117,15 +83,18 @@ class CopilotKitSDK:
         state: dict,
         messages: List[Message],
     ):
-        """Continue an agent execution"""
-        agent = self._get_agent(context=context, name=name)
+        """Execute an agent"""
+        agents = self.agents(context) if callable(self.agents) else self.agents
+        agent = next((agent for agent in agents if agent.name == name), None)
+        if agent is None:
+            raise AgentNotFoundException(name)
 
         try:
-            return agent.continue_execution(
+            return agent.execute(
                 thread_id=thread_id,
                 node_name=node_name,
                 state=state,
                 messages=messages,
             )
-        except Exception as error:            
+        except Exception as error:
             raise AgentExecutionException(name, error) from error

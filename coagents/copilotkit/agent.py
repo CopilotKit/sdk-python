@@ -2,6 +2,7 @@
 
 from typing import Optional, List
 from abc import ABC, abstractmethod
+import uuid
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.load.load import load as langchain_load
@@ -29,25 +30,15 @@ class Agent(ABC):
         self.merge_state = merge_state
 
     @abstractmethod
-    def start_execution(
+    def execute(
         self,
         *,
-        thread_id: str,
-        arguments: dict,
-        messages: List[Message]
-    ):
-        """Start the execution of the agent"""
-
-    @abstractmethod
-    def continue_execution(
-        self,
-        *,
-        thread_id: str,
         state: dict,
-        node_name: str,
-        messages: List[Message]
+        messages: List[Message],
+        thread_id: Optional[str] = None,
+        node_name: Optional[str] = None,
     ):
-        """Continue the execution of the agent"""
+        """Execute the agent"""
 
     def dict_repr(self):
         """Dict representation of the action"""
@@ -57,7 +48,7 @@ class Agent(ABC):
             'parameters': normalize_parameters(self.parameters),
         }
 
-def langgraph_default_merge_state(_mode: str, state: dict, messages: List[Message]):
+def langgraph_default_merge_state(state: dict, messages: List[Message]):
     """Default merge state for LangGraph"""
     if len(messages) > 0 and isinstance(messages[0], SystemMessage):
         # remove system message
@@ -106,49 +97,35 @@ class LangGraphAgent(Agent):
             "role": "assistant"
         })
 
-    def start_execution(
+    def execute( # pylint: disable=too-many-arguments
         self,
         *,
-        thread_id: str,
-        arguments: dict,
-        messages: List[Message]
-    ):
-        langchain_messages = copilotkit_messages_to_langchain(messages)
-
-        state = self.merge_state("start", arguments, langchain_messages)
-      
-        return self._stream_events(
-            mode="start",
-            thread_id=thread_id,
-            state=state,
-            node_name="__start__"
-        )
-
-
-    def continue_execution( # pylint: disable=too-many-arguments
-        self,
-        *,
-        thread_id: str,
         state: dict,
-        node_name: str,
-        messages: List[Message]
+        messages: List[Message],
+        thread_id: Optional[str] = None,
+        node_name: Optional[str] = None,
     ):
         langchain_messages = copilotkit_messages_to_langchain(messages)
-        state = self.merge_state("continue", state, langchain_messages)
+        state = self.merge_state(state, langchain_messages)
+
+        mode = "continue" if thread_id and node_name else "start"
+        thread_id = thread_id or str(uuid.uuid4())
 
         config = {"configurable": {"thread_id": thread_id}}
-        self.agent.update_state(config, state, as_node=node_name)
+        if mode == "continue":
+            self.agent.update_state(config, state, as_node=node_name)
 
         return self._stream_events(
-            mode="continue",
+            mode=mode,
             thread_id=thread_id,
             state=state,
             node_name=node_name
         )
 
     async def _stream_events(self, *, mode: str, thread_id: str, state: dict, node_name: str):
+
         config = {"configurable": {"thread_id": thread_id}}
-        yield self._state_sync_event(thread_id, node_name, state, True) + "\n"
+        yield self._state_sync_event(thread_id, node_name or "__start__", state, True) + "\n"
 
         initial_state = state if mode == "start" else None
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
