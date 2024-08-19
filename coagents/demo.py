@@ -11,12 +11,13 @@ from langchain_core.tools import tool
 from fastapi import FastAPI
 import uvicorn
 from .copilotkit.integrations.fastapi import add_fastapi_endpoint
-from .copilotkit import CopilotKitSDK, LangGraphAgent
+from .copilotkit import CopilotKitSDK, LangGraphAgent, CopilotKitState
 from .copilotkit.langchain import configure_copilotkit
 
 class State(MessagesState):
     """State"""
     location: str
+    copilotkit: CopilotKitState
 
 
 class LocationData(TypedDict):
@@ -35,10 +36,6 @@ tool_node = ToolNode(tools)
 
 def check_location(state: State, config: RunnableConfig):
     """Check the location"""
-
-    # do not stream back to copilotkit
-    config = configure_copilotkit(config, hidden=True)
-
     model = ChatOpenAI(model="gpt-4o").bind_tools([LocationData], tool_choice="LocationData")
 
     response = model.invoke([
@@ -57,6 +54,8 @@ def check_location(state: State, config: RunnableConfig):
 
 async def ask_user_location(state: State, config: RunnableConfig): # pylint: disable=unused-argument
     """Ask the human where they are from"""
+    config = configure_copilotkit(config, emit_messages=True)
+
     response = await ChatOpenAI(model="gpt-4o").ainvoke([
         *state["messages"],
         SystemMessage(
@@ -65,12 +64,30 @@ async def ask_user_location(state: State, config: RunnableConfig): # pylint: dis
     ], config)
     return {"messages": response}
 
-async def chatbot(state: State):
+async def make_slide(state: State, config: RunnableConfig):
+    """Make a slide"""
+    config = configure_copilotkit(config, emit_tool_calls=True)
+
+    await (ChatOpenAI(model="gpt-4o")
+           .bind_tools(state["copilotkit"]["actions"], tool_choice="appendSlide")
+           .ainvoke([
+        *state["messages"],
+        SystemMessage(
+            content=(
+                "Make a slide about the user's location (leave out the image): " +
+                state["location"]
+            )
+        )
+    ], config))
+    return None
+
+async def chatbot(state: State, config: RunnableConfig):
     """Call model"""
+    config = configure_copilotkit(config, emit_messages=True)
     model = ChatOpenAI(model="gpt-4o")
     model = model.bind_tools(tools)
     messages = state["messages"]
-    response = await model.ainvoke(messages)
+    response = await model.ainvoke(messages, config)
     # We return a list, because this will get added to the existing list
     return {"messages": response}
 
@@ -78,7 +95,7 @@ async def chatbot(state: State):
 def route_location(state: State):
     """Route the location"""
     if state.get("location"):
-        return "chatbot"
+        return "make_slide"
     return "ask_user_location"
 
 
@@ -88,16 +105,18 @@ workflow.add_node("check_location", check_location)
 workflow.add_node("ask_user_location", ask_user_location)
 workflow.add_node("chatbot", chatbot)
 workflow.add_node("tools", tool_node)
+workflow.add_node("make_slide", make_slide)
 
 
 workflow.add_edge(START, "check_location")
 workflow.add_conditional_edges("check_location", route_location)
 workflow.add_edge("ask_user_location", "check_location")
+workflow.add_edge("make_slide", "chatbot")
 workflow.add_conditional_edges("chatbot", tools_condition)
 workflow.add_edge("tools", "chatbot")
 
 memory = MemorySaver()
-agent = workflow.compile(checkpointer=memory, interrupt_after=["ask_user_location"])
+agent = workflow.compile(checkpointer=memory, interrupt_after=["ask_user_location", "make_slide"])
 
 app = FastAPI()
 sdk = CopilotKitSDK(

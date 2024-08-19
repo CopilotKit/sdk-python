@@ -82,6 +82,7 @@ class CopilotKitSDK:
         node_name: str,
         state: dict,
         messages: List[Message],
+        actions: List[any],
     ):
         """Execute an agent"""
         agents = self.agents(context) if callable(self.agents) else self.agents
@@ -95,6 +96,7 @@ class CopilotKitSDK:
                 node_name=node_name,
                 state=state,
                 messages=messages,
+                actions=actions,
             )
         except Exception as error:
             raise AgentExecutionException(name, error) from error

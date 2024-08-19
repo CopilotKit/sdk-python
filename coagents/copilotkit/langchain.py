@@ -46,16 +46,20 @@ def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessag
 def configure_copilotkit(
         config: Optional[RunnableConfig] = None,
         *,
-        call_actions: bool = False,
-        hidden: bool = True
+        emit_tool_calls: bool = False,
+        emit_messages: bool = False,
+        emit_all: bool = False
     ):
     """
     Configure for LangChain for use in CopilotKit
     """
     tags = config.get("tags", []) if config else []
-    if call_actions:
-        tags.append("copilotkit:call-actions")
-    if hidden:
-        tags.append("copilotkit:hidden")
-    config = ensure_config((config or {}) | {"tags": tags})
-    return config
+
+    if emit_tool_calls or emit_all:
+        tags.append("copilotkit:emit-tool-calls")
+    if emit_messages or emit_all:
+        tags.append("copilotkit:emit-messages")
+
+    config = (config or {}).copy()
+    config["tags"] = tags
+    return ensure_config(config)

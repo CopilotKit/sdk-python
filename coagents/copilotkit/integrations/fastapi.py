@@ -68,6 +68,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
         name = body_get_or_raise(body, "name")
         state = body_get_or_raise(body, "state")
         messages = body_get_or_raise(body, "messages")
+        actions = body.get("actions", [])
 
         return handle_execute_agent(
             sdk=sdk,
@@ -77,6 +78,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
             name=name,
             state=state,
             messages=messages,
+            actions=actions,
         )
 
 
@@ -117,6 +119,7 @@ def handle_execute_agent( # pylint: disable=too-many-arguments
         name: str,
         state: dict,
         messages: List[Message],
+        actions: List[any],
     ):
     """Handle continue agent execution request with FastAPI"""
     try:
@@ -127,6 +130,7 @@ def handle_execute_agent( # pylint: disable=too-many-arguments
             node_name=node_name,
             state=state,
             messages=messages,
+            actions=actions,
         )
         return StreamingResponse(events, media_type="application/json")
     except AgentNotFoundException as exc:

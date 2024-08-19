@@ -48,7 +48,12 @@ class Agent(ABC):
             'parameters': normalize_parameters(self.parameters),
         }
 
-def langgraph_default_merge_state(state: dict, messages: List[Message]):
+def langgraph_default_merge_state( # pylint: disable=unused-argument
+        *,
+        state: dict,
+        messages: List[Message],
+        actions: List[any]
+    ):
     """Default merge state for LangGraph"""
     if len(messages) > 0 and isinstance(messages[0], SystemMessage):
         # remove system message
@@ -65,6 +70,9 @@ def langgraph_default_merge_state(state: dict, messages: List[Message]):
     return {
         **state,
         "messages": merged_messages,
+        "copilotkit": {
+            "actions": actions
+        }
     }
 
 class LangGraphAgent(Agent):
@@ -104,9 +112,14 @@ class LangGraphAgent(Agent):
         messages: List[Message],
         thread_id: Optional[str] = None,
         node_name: Optional[str] = None,
+        actions: Optional[List[any]] = None,
     ):
         langchain_messages = copilotkit_messages_to_langchain(messages)
-        state = self.merge_state(state, langchain_messages)
+        state = self.merge_state(
+            state=state,
+            messages=langchain_messages,
+            actions=actions
+        )
 
         mode = "continue" if thread_id and node_name else "start"
         thread_id = thread_id or str(uuid.uuid4())
