@@ -13,6 +13,7 @@ import uvicorn
 from .copilotkit.integrations.fastapi import add_fastapi_endpoint
 from .copilotkit import CopilotKitSDK, LangGraphAgent, CopilotKitState
 from .copilotkit.langchain import configure_copilotkit
+from .copilotkit import Action
 
 class State(MessagesState):
     """State"""
@@ -118,16 +119,32 @@ workflow.add_edge("tools", "chatbot")
 memory = MemorySaver()
 agent = workflow.compile(checkpointer=memory, interrupt_after=["ask_user_location", "make_slide"])
 
+def check_weather(query: str): #pylint: disable=unused-argument
+    """Check the weather"""
+    return "The weather is cloudy with a chance of hail."
+
 app = FastAPI()
 sdk = CopilotKitSDK(
-    agents=[
-        LangGraphAgent(
-            name="weatherAgent",
-            description="Retrieve weather information.",
-            parameters=[],
-            agent=agent,
+    actions=[
+        Action(
+            name="checkWeather",
+            description="Check the weather.",
+            parameters=[{
+                "name": "query",
+                "type": "string",
+                "description": "The query to check the weather for."
+            }],
+            handler=check_weather,
         )
     ],
+    # agents=[
+    #     LangGraphAgent(
+    #         name="weatherAgent",
+    #         description="Retrieve weather information.",
+    #         parameters=[],
+    #         agent=agent,
+    #     )
+    # ],
 )
 
 add_fastapi_endpoint(app, sdk, "/copilotkit")
