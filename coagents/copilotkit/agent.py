@@ -114,6 +114,8 @@ class LangGraphAgent(Agent):
         node_name: Optional[str] = None,
         actions: Optional[List[any]] = None,
     ):
+        print("executing", thread_id, node_name)
+
         langchain_messages = copilotkit_messages_to_langchain(messages)
         state = self.merge_state(
             state=state,
@@ -121,7 +123,7 @@ class LangGraphAgent(Agent):
             actions=actions
         )
 
-        mode = "continue" if thread_id and node_name else "start"
+        mode = "continue" if thread_id and node_name != "__end__" else "start"
         thread_id = thread_id or str(uuid.uuid4())
 
         config = {"configurable": {"thread_id": thread_id}}
@@ -142,13 +144,24 @@ class LangGraphAgent(Agent):
 
         initial_state = state if mode == "start" else None
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
-            node_name = event.get("name")
+            current_node_name = event.get("name")
             event_type = event.get("event")
+
+            # we only want to update the node name under certain conditions
+            # since we don't need any internal node names to be sent to the frontend
+            if (current_node_name != "LangGraph" and
+                event_type not in [
+                    "on_chat_model_start", 
+                    "on_chat_model_stream", 
+                    "on_chat_model_end",
+                ]):
+                node_name = current_node_name
+
             tags = event.get("tags", [])
             if "copilotkit:hidden" in tags:
                 continue
-            if not((event_type == "on_chain_start" and node_name == "LangGraph") or
-                node_name == "__start__"):
+            if not((event_type == "on_chain_start" and current_node_name == "LangGraph") or
+                current_node_name == "__start__"):
                 updated_state = self.agent.get_state(config).values
                 if updated_state != state:
                     state = updated_state
@@ -156,10 +169,18 @@ class LangGraphAgent(Agent):
             yield langchain_dumps(event) + "\n"
 
         state = self.agent.get_state(config)
-        running = state.next != ()
+        is_end_node = state.next == ()
 
         node_name = list(state.metadata["writes"].keys())[0]
-        yield self._state_sync_event(thread_id, node_name, state.values, running) + "\n"
+        yield self._state_sync_event(
+            thread_id,
+            node_name if not is_end_node else "__end__",
+            state.values,
+            # For now, we assume that the agent is always running
+            # In the future, we will have a special node that will
+            # indicate that the agent is done
+            True
+        ) + "\n"
 
 
 

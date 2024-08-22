@@ -13,6 +13,9 @@
     "langchain",
     "openai",
     "ainvoke",
-    "readables"
+    "readables",
+    "autotale",
+    "pydantic",
+    "childrens"
   ]
 }
