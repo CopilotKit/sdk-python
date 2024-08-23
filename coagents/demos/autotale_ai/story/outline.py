@@ -8,7 +8,7 @@ from coagents.demos.autotale_ai.state import AgentState
 
 @tool
 def set_outline(outline: str):
-    """Set the outline of the story."""
+    """Sets the outline of the story."""
     return outline
 
 

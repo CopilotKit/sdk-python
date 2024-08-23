@@ -26,9 +26,18 @@ async def chatbot_node(state: AgentState, config: RunnableConfig):
         config,
         emit_messages=True,
         emit_state={
-            "set_outline.outline": "outline",
-            "set_characters.characters": "characters",
-            "set_story.pages": "story",
+            "outline": {
+                "tool": "set_outline",
+                "arguments": "outline"
+            },
+            "characters": {
+                "tool": "set_characters",
+                "arguments": "characters"
+            },
+            "story": {
+                "tool": "set_story",
+                "arguments": "story"
+            },
         }
     )
 
@@ -46,7 +55,7 @@ taking the appropriate actions to advance the story writing process. Do not repe
 
 Your state consists of the following concepts:
 
-- Outline: The outline of the story. 
+- Outline: The outline of the story. Should be short, 2-3 sentences.
 - Characters: The characters that make up the story (depends on outline)
 - Story: The final story result. (depends on outline & characters)
 

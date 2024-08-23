@@ -14,7 +14,8 @@ from coagents.demos.autotale_ai.state import AgentState, Character
 def set_characters(characters: List[Character]):
     """
     Extract the book's main characters from the conversation.
-    Make the appearance and traits of the characters as detailed as possible
+    The traits should be short: 3-4 adjectives.
+    The appearance should be as detailed as possible. What they look like, their clothes, etc.
     """
     return characters
 

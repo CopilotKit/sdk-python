@@ -14,7 +14,7 @@ class Character(TypedDict):
     """
     name: str
     appearance: str
-    traits: str
+    traits: List[str]
 
 
 class Page(TypedDict):
