@@ -8,10 +8,12 @@ from langchain.load.dump import dumps as langchain_dumps
 from langchain.load.load import load as langchain_load
 
 from langchain.schema import SystemMessage
+
+from partialjson.json_parser import JSONParser
+
 from .parameter import BaseParameter, normalize_parameters
 from .types import Message
 from .langchain import copilotkit_messages_to_langchain
-
 
 
 class Agent(ABC):
@@ -142,10 +144,20 @@ class LangGraphAgent(Agent):
         config = {"configurable": {"thread_id": thread_id}}
         yield self._state_sync_event(thread_id, node_name or "__start__", state, True) + "\n"
 
+        streaming_state_extractor = _StreamingStateExtractor({})
+
         initial_state = state if mode == "start" else None
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             current_node_name = event.get("name")
             event_type = event.get("event")
+
+            metadata = event.get("metadata")
+            emit_state = metadata.get("copilotkit:emit-state")
+
+            if emit_state and event_type == "on_chat_model_start":
+                # reset the streaming state extractor
+                # print("resetting streaming state extractor")
+                streaming_state_extractor = _StreamingStateExtractor(emit_state)
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
@@ -157,12 +169,19 @@ class LangGraphAgent(Agent):
                 ]):
                 node_name = current_node_name
 
-            tags = event.get("tags", [])
-            if "copilotkit:hidden" in tags:
-                continue
             if not((event_type == "on_chain_start" and current_node_name == "LangGraph") or
                 current_node_name == "__start__"):
+
                 updated_state = self.agent.get_state(config).values
+
+                if emit_state and event_type == "on_chat_model_stream":
+                    streaming_state_extractor.buffer_tool_calls(event)
+
+                updated_state = {
+                    **updated_state,
+                    **streaming_state_extractor.extract_state()
+                }
+
                 if updated_state != state:
                     state = updated_state
                     yield self._state_sync_event(thread_id, node_name, state, True) + "\n"
@@ -190,3 +209,61 @@ class LangGraphAgent(Agent):
             **super_repr,
             'type': 'langgraph'
         }
+
+class _StreamingStateExtractor:
+    def __init__(self, emit_state: dict):
+        self.emit_state = emit_state
+        self.tool_call_buffer = {}
+        self.current_tool_call = None
+
+    def buffer_tool_calls(self, event: dict):
+        """Buffer the tool calls"""
+        if len(event["data"]["chunk"].tool_call_chunks) > 0:
+            chunk = event["data"]["chunk"].tool_call_chunks[0]
+            if chunk["name"] is not None:
+                self.current_tool_call = chunk["name"]
+                self.tool_call_buffer[self.current_tool_call] = chunk["args"]
+            elif self.current_tool_call is not None:
+                self.tool_call_buffer[self.current_tool_call] = (
+                    self.tool_call_buffer[self.current_tool_call] + chunk["args"]
+                )
+
+    def get_emit_state_config(self, current_tool_name):
+        """Get the emit state config"""
+
+        for key, value in self.emit_state.items():
+            if '.' in key:
+                tool_name, argument_name = key.split('.', 1)
+            else:
+                tool_name = key
+                argument_name = None
+
+            if current_tool_name == tool_name:
+                return (argument_name, value)
+
+        return (None, None)
+
+
+    def extract_state(self):
+        """Extract the streaming state"""
+        parser = JSONParser()
+
+        state = {}
+
+        for key, value in self.tool_call_buffer.items():
+            argument_name, mapped_value = self.get_emit_state_config(key)
+
+            if mapped_value is None:
+                continue
+
+            try:
+                parsed_value = parser.parse(value)
+            except Exception as _exc: # pylint: disable=broad-except
+                continue
+
+            if argument_name is None:
+                state[mapped_value] = parsed_value
+            else:
+                state[mapped_value] = parsed_value.get(argument_name)
+
+        return state

@@ -48,18 +48,24 @@ def configure_copilotkit(
         *,
         emit_tool_calls: bool = False,
         emit_messages: bool = False,
-        emit_all: bool = False
+        emit_all: bool = False,
+        emit_state: Optional[dict] = None
     ):
     """
     Configure for LangChain for use in CopilotKit
     """
     tags = config.get("tags", []) if config else []
+    metadata = config.get("metadata", {}) if config else {}
 
     if emit_tool_calls or emit_all:
         tags.append("copilotkit:emit-tool-calls")
     if emit_messages or emit_all:
         tags.append("copilotkit:emit-messages")
 
+    if emit_state:
+        metadata["copilotkit:emit-state"] = emit_state
+
     config = (config or {}).copy()
     config["tags"] = tags
+    config["metadata"] = metadata
     return ensure_config(config)

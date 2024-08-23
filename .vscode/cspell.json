@@ -16,6 +16,7 @@
     "readables",
     "autotale",
     "pydantic",
-    "childrens"
+    "childrens",
+    "partialjson"
   ]
 }

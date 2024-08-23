@@ -12,25 +12,8 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
-from openai import AsyncOpenAI
-
 from coagents.demos.autotale_ai.state import AgentState, Character
 
-
-async def _generate_image(image_description: str):
-    """
-    Generate an image for a page.
-    """
-    client = AsyncOpenAI()
-
-    response = await client.images.generate(
-        model="dall-e-3",
-        prompt=image_description,
-        size="1024x1024",
-        quality="standard",
-        n=1,
-    )
-    return response.data[0].url
 
 class ImageDescription(BaseModel):
     """
@@ -101,10 +84,9 @@ async def story_node(state: AgentState, config: RunnableConfig):
             characters,
             config
         )
-        image_url = await _generate_image(description)
         return {
             "content": page["content"],
-            "image_url": image_url
+            "image_description": description
         }
 
     tasks = [generate_page(page) for page in pages]

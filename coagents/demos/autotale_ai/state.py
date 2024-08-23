@@ -22,7 +22,6 @@ class Page(TypedDict):
     Represents a page in the children's story with an image url.
     """
     content: str
-    image_url: str
 
 class AgentState(MessagesState):
     """

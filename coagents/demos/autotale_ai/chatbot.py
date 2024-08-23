@@ -7,7 +7,7 @@ import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import ToolMessage, AIMessage
 
 from coagents.demos.autotale_ai.state import AgentState
 from coagents.demos.autotale_ai.story.outline import set_outline
@@ -22,7 +22,15 @@ async def chatbot_node(state: AgentState, config: RunnableConfig):
     the next route.
     """
 
-    config = configure_copilotkit(config, emit_messages=True)
+    config = configure_copilotkit(
+        config,
+        emit_messages=True,
+        emit_state={
+            "set_outline.outline": "outline",
+            "set_characters.characters": "characters",
+            "set_story.pages": "story",
+        }
+    )
 
     tools = [set_outline]
 
@@ -60,6 +68,16 @@ Especially, dont' repeat the story and so on, just call the tools.
     if state.get("story") is not None:
         system_message += f"\n\nThe current story is: {json.dumps(state['story'])}"
 
+    last_message = state["messages"][-1] if state["messages"] else None
+
+    if last_message and isinstance(last_message, AIMessage):
+        system_message += """
+The user did not submit the last message. This means they probably changed the state of the story by
+in the UI. Figure out if you need to regenerate the outline, characters or story and call the appropriate
+tool. If not, just respond to the user.
+        """
+
+
     response = await ChatOpenAI(model="gpt-4o").bind_tools(tools, parallel_tool_calls=False).ainvoke([
         *state["messages"],
         SystemMessage(
@@ -82,4 +100,3 @@ Especially, dont' repeat the story and so on, just call the tools.
             )
         ],
     }
-
