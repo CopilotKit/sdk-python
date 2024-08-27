@@ -13,6 +13,7 @@ from coagents.demos.autotale_ai.state import AgentState
 from coagents.demos.autotale_ai.story.outline import set_outline
 from coagents.demos.autotale_ai.story.characters import set_characters
 from coagents.demos.autotale_ai.story.story import set_story
+from coagents.demos.autotale_ai.story.style import set_style
 from coagents.copilotkit.langchain import configure_copilotkit
 # pylint: disable=line-too-long
 
@@ -28,20 +29,16 @@ async def chatbot_node(state: AgentState, config: RunnableConfig):
         emit_state={
             "outline": {
                 "tool": "set_outline",
-                "arguments": "outline"
+                "argument": "outline"
             },
             "characters": {
                 "tool": "set_characters",
-                "arguments": "characters"
-            },
-            "story": {
-                "tool": "set_story",
-                "arguments": "story"
+                "argument": "characters"
             },
         }
     )
 
-    tools = [set_outline]
+    tools = [set_outline, set_style]
 
     if state.get("outline") is not None:
         tools.append(set_characters)

@@ -14,6 +14,7 @@ from coagents.demos.autotale_ai.chatbot import chatbot_node
 from coagents.demos.autotale_ai.story.outline import outline_node
 from coagents.demos.autotale_ai.story.characters import characters_node
 from coagents.demos.autotale_ai.story.story import story_node
+from coagents.demos.autotale_ai.story.style import style_node
 
 
 
@@ -32,6 +33,7 @@ workflow = StateGraph(AgentState)
 workflow.add_node("chatbot_node", chatbot_node)
 workflow.add_node("outline_node", outline_node)
 workflow.add_node("characters_node", characters_node)
+workflow.add_node("style_node", style_node)
 workflow.add_node("story_node", story_node)
 
 # Chatbot
@@ -44,6 +46,7 @@ workflow.add_conditional_edges(
         "set_outline": "outline_node",
         "set_characters": "characters_node",
         "set_story": "story_node",
+        "set_style": "style_node",
         END: END,
     }
 )
@@ -59,6 +62,11 @@ workflow.add_edge(
 
 workflow.add_edge(
     "story_node",
+    "chatbot_node"
+)
+
+workflow.add_edge(
+    "style_node",
     "chatbot_node"
 )
 

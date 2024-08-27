@@ -116,7 +116,6 @@ class LangGraphAgent(Agent):
         node_name: Optional[str] = None,
         actions: Optional[List[any]] = None,
     ):
-        print("executing", thread_id, node_name)
 
         langchain_messages = copilotkit_messages_to_langchain(messages)
         state = self.merge_state(
@@ -147,6 +146,12 @@ class LangGraphAgent(Agent):
         streaming_state_extractor = _StreamingStateExtractor({})
 
         initial_state = state if mode == "start" else None
+ 
+        if node_name is None:
+            node_name = "__start__"
+
+        prev_node_name = None
+
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             current_node_name = event.get("name")
             event_type = event.get("event")
@@ -156,35 +161,33 @@ class LangGraphAgent(Agent):
 
             if emit_state and event_type == "on_chat_model_start":
                 # reset the streaming state extractor
-                # print("resetting streaming state extractor")
                 streaming_state_extractor = _StreamingStateExtractor(emit_state)
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
-            if (current_node_name != "LangGraph" and
-                event_type not in [
-                    "on_chat_model_start", 
-                    "on_chat_model_stream", 
-                    "on_chat_model_end",
-                ]):
+            if current_node_name in self.agent.nodes.keys():
                 node_name = current_node_name
 
-            if not((event_type == "on_chain_start" and current_node_name == "LangGraph") or
+            if not(
+                (event_type == "on_chain_start" and current_node_name == "LangGraph") or
                 current_node_name == "__start__"):
+                pass
 
-                updated_state = self.agent.get_state(config).values
+            updated_state = self.agent.get_state(config).values
 
-                if emit_state and event_type == "on_chat_model_stream":
-                    streaming_state_extractor.buffer_tool_calls(event)
+            if emit_state and event_type == "on_chat_model_stream":
+                streaming_state_extractor.buffer_tool_calls(event)
 
-                updated_state = {
-                    **updated_state,
-                    **streaming_state_extractor.extract_state()
-                }
+            updated_state = {
+                **updated_state,
+                **streaming_state_extractor.extract_state()
+            }
 
-                if updated_state != state:
-                    state = updated_state
-                    yield self._state_sync_event(thread_id, node_name, state, True) + "\n"
+            if updated_state != state or prev_node_name != node_name:
+                state = updated_state
+                prev_node_name = node_name
+                yield self._state_sync_event(thread_id, node_name, state, True) + "\n"
+
             yield langchain_dumps(event) + "\n"
 
         state = self.agent.get_state(config)
@@ -232,14 +235,8 @@ class _StreamingStateExtractor:
         """Get the emit state config"""
 
         for key, value in self.emit_state.items():
-            if '.' in key:
-                tool_name, argument_name = key.split('.', 1)
-            else:
-                tool_name = key
-                argument_name = None
-
-            if current_tool_name == tool_name:
-                return (argument_name, value)
+            if current_tool_name == value.get("tool"):
+                return (value.get("argument"), key)
 
         return (None, None)
 
@@ -251,9 +248,9 @@ class _StreamingStateExtractor:
         state = {}
 
         for key, value in self.tool_call_buffer.items():
-            argument_name, mapped_value = self.get_emit_state_config(key)
+            argument_name, state_key = self.get_emit_state_config(key)
 
-            if mapped_value is None:
+            if state_key is None:
                 continue
 
             try:
@@ -262,8 +259,8 @@ class _StreamingStateExtractor:
                 continue
 
             if argument_name is None:
-                state[mapped_value] = parsed_value
+                state[state_key] = parsed_value
             else:
-                state[mapped_value] = parsed_value.get(argument_name)
+                state[state_key] = parsed_value.get(argument_name)
 
         return state

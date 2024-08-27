@@ -25,6 +25,7 @@ async def _generate_page_image_description(
         messages: list,
         page_content: str,
         characters: List[Character],
+        style: str,
         config: RunnableConfig
     ):
     """
@@ -36,15 +37,20 @@ async def _generate_page_image_description(
 The user and the AI are having a conversation about writing a children's story.
 It's your job to generate a vivid description of a page in the story.
 Make the description as detailed as possible.
-These are the characters in the story: \n\n
+
+These are the characters in the story:
 {characters}
-This is the page content: \n\n
+
+This is the page content:
 {page_content}
+
+This is the graphical style of the story:
+{style}
+
 Imagine an image of the page. Describe the looks of the page in great detail.
 Also describe the setting in which the image is taken.
 Make sure to include the name of the characters and full description of the characters in your output.
-If the user mentioned a specific style for the images in the conversation, YOU MUST 
-include that style in your description. Describe the style in detail, it's important.
+Describe the style in detail, it's very important for image generation.
         """
     )
     model = ChatOpenAI(model="gpt-4o").with_structured_output(ImageDescription)
@@ -66,6 +72,8 @@ def set_story(pages: List[StoryPage]):
     """
     Considering the outline and characters, write a story.
     Keep it simple, 3-4 sentences per page.
+    5 pages max.
+    (If the user mentions "chapters" in the conversation they mean pages, treat it as such)
     """
     return pages
 
@@ -76,12 +84,14 @@ async def story_node(state: AgentState, config: RunnableConfig):
     last_message = state["messages"][-1]
     pages = json.loads(last_message.content)["pages"]
     characters = state.get("characters", [])
+    style = state.get("style", "Pixar movies style 3D images")
 
     async def generate_page(page):
         description = await _generate_page_image_description(
             state["messages"],
             page["content"],
             characters,
+            style,
             config
         )
         return {
