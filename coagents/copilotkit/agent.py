@@ -96,7 +96,15 @@ class LangGraphAgent(Agent):
         )
         self.agent = agent
 
-    def _state_sync_event(self, thread_id: str, node_name: str, state: dict, running: bool):
+    def _emit_state_sync_event(
+            self,
+            *,
+            thread_id: str,
+            run_id: str,
+            node_name: str,
+            state: dict,
+            running: bool
+        ):
         return langchain_dumps({
             "event": "on_copilotkit_state_sync",
             "thread_id": thread_id,
@@ -138,23 +146,30 @@ class LangGraphAgent(Agent):
             node_name=node_name
         )
 
-    async def _stream_events(self, *, mode: str, thread_id: str, state: dict, node_name: str):
+    async def _stream_events(
+            self,
+            *,
+            mode: str,
+            thread_id: str,
+            state: dict,
+            node_name: Optional[str] = None
+        ):
 
         config = {"configurable": {"thread_id": thread_id}}
-        yield self._state_sync_event(thread_id, node_name or "__start__", state, True) + "\n"
-
         streaming_state_extractor = _StreamingStateExtractor({})
-
         initial_state = state if mode == "start" else None
- 
-        if node_name is None:
-            node_name = "__start__"
-
         prev_node_name = None
 
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
+            # print(event)
+            # print("")
+            # print("---")
+            # print("")
+            # {'event': 'on_chain_start', 'name': 'chatbot_node', 'run_id': '1fba8108-5b7e-4f34-ba39-c2d21396e1f6', 'tags': ['graph:step:1'], 'metadata': {'thread_id': '8c591049-e6ce-4bb4-99b6-c238befc5f07', 'langgraph_step': 1, 'langgraph_node': 'chatbot_node', 'langgraph_triggers': ['start:chatbot_node'], 'langgraph_task_idx': 0, 'checkpoint_id': '1ef651bb-d8d5-6bf6-8000-a0a72ff5af12', 'checkpoint_ns': 'chatbot_node'}, 'data': {}, 'parent_ids': []}
+            # {'event': 'on_chain_end', 'name': 'chatbot_node', 'run_id': '1fba8108-5b7e-4f34-ba39-c2d21396e1f6', 'tags': ['graph:step:1'], 'metadata': {'thread_id': '8c591049-e6ce-4bb4-99b6-c238befc5f07', 'langgraph_step': 1, 'langgraph_node': 'chatbot_node', 'langgraph_triggers': ['start:chatbot_node'], 'langgraph_task_idx': 0, 'checkpoint_id': '1ef651bb-d8d5-6bf6-8000-a0a72ff5af12', 'checkpoint_ns': 'chatbot_node'}, 'data': {'input': {'messages': [HumanMessage(content='I want to write a childrens book', id='ck-c3a2f233-7321-4506-b7c0-c5458409fa33')], 'outline': None, 'characters': None, 'story': None}, 'output': {'messages': AIMessage(content="That sounds like a wonderful idea! Let's start with the outline of your story. Do you have any specific themes or ideas in mind, or should we brainstorm together?", response_metadata={'finish_reason': 'stop', 'model_name': 'gpt-4o-2024-05-13', 'system_fingerprint': 'fp_a2ff031fb5'}, id='run-121cce24-5e3a-4d34-b802-4e3d73f55193')}}, 'parent_ids': []}
             current_node_name = event.get("name")
             event_type = event.get("event")
+            run_id = event.get("run_id")
 
             metadata = event.get("metadata")
             emit_state = metadata.get("copilotkit:emit-state")
@@ -166,12 +181,12 @@ class LangGraphAgent(Agent):
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
             if current_node_name in self.agent.nodes.keys():
+                print("updating node name", current_node_name)
                 node_name = current_node_name
 
-            if not(
-                (event_type == "on_chain_start" and current_node_name == "LangGraph") or
-                current_node_name == "__start__"):
-                pass
+            # we don't have a node name yet, so we can't update the state
+            if node_name is None:
+                continue
 
             updated_state = self.agent.get_state(config).values
 
@@ -186,7 +201,13 @@ class LangGraphAgent(Agent):
             if updated_state != state or prev_node_name != node_name:
                 state = updated_state
                 prev_node_name = node_name
-                yield self._state_sync_event(thread_id, node_name, state, True) + "\n"
+                yield self._emit_state_sync_event(
+                    thread_id=thread_id,
+                    run_id=run_id,
+                    node_name=node_name,
+                    state=state,
+                    running=True
+                ) + "\n"
 
             yield langchain_dumps(event) + "\n"
 
@@ -194,14 +215,15 @@ class LangGraphAgent(Agent):
         is_end_node = state.next == ()
 
         node_name = list(state.metadata["writes"].keys())[0]
-        yield self._state_sync_event(
-            thread_id,
-            node_name if not is_end_node else "__end__",
-            state.values,
+        yield self._emit_state_sync_event(
+            thread_id=thread_id,
+            run_id=run_id,
+            node_name=node_name if not is_end_node else "__end__",
+            state=state.values,
             # For now, we assume that the agent is always running
             # In the future, we will have a special node that will
             # indicate that the agent is done
-            True
+            running=True
         ) + "\n"
 
 
