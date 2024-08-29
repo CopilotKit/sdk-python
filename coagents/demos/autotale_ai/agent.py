@@ -21,7 +21,6 @@ from coagents.demos.autotale_ai.story.style import style_node
 
 def route_story_writing(state):
     """Route to story writing nodes."""
-    print(state["messages"][-1])
     last_message = state["messages"][-1]
 
     if isinstance(last_message, ToolMessage):

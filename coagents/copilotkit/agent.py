@@ -178,7 +178,6 @@ class LangGraphAgent(Agent):
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
             if current_node_name in self.agent.nodes.keys():
-                print("updating node name", current_node_name)
                 node_name = current_node_name
 
             # we don't have a node name yet, so we can't update the state
