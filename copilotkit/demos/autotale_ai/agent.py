@@ -9,12 +9,12 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from langchain_core.messages import ToolMessage
 
-from coagents.demos.autotale_ai.state import AgentState
-from coagents.demos.autotale_ai.chatbot import chatbot_node
-from coagents.demos.autotale_ai.story.outline import outline_node
-from coagents.demos.autotale_ai.story.characters import characters_node
-from coagents.demos.autotale_ai.story.story import story_node
-from coagents.demos.autotale_ai.story.style import style_node
+from copilotkit.demos.autotale_ai.state import AgentState
+from copilotkit.demos.autotale_ai.chatbot import chatbot_node
+from copilotkit.demos.autotale_ai.story.outline import outline_node
+from copilotkit.demos.autotale_ai.story.characters import characters_node
+from copilotkit.demos.autotale_ai.story.story import story_node
+from copilotkit.demos.autotale_ai.story.style import style_node
 
 
 

@@ -12,7 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_openai import ChatOpenAI
 
-from coagents.demos.autotale_ai.state import AgentState, Character
+from copilotkit.demos.autotale_ai.state import AgentState, Character
 
 
 class ImageDescription(BaseModel):

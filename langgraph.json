@@ -3,7 +3,7 @@
   "dockerfile_lines": [],
   "dependencies": ["."],
   "graphs": {
-    "autotale_ai": "./coagents/demos/autotale_ai/agent.py:graph"
+    "autotale_ai": "./copilotkit/demos/autotale_ai/agent.py:graph"
   },
   "env": ".env"
 }

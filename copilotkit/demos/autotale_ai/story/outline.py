@@ -4,7 +4,7 @@ Outline node.
 
 import json
 from langchain_core.tools import tool
-from coagents.demos.autotale_ai.state import AgentState
+from copilotkit.demos.autotale_ai.state import AgentState
 
 @tool
 def set_outline(outline: str):

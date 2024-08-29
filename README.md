@@ -18,7 +18,7 @@ poetry config virtualenvs.in-project true
 # run
 
 ```
-poetry run uvicorn coagents.demo:app --reload
+poetry run uvicorn copilotkit.demo:app --reload
 ```
 
 # list

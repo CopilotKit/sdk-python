@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "coagents"
+name = "copilotkit"
 version = "0.1.0"
 description = ""
 authors = ["Markus Ecker <markus.ecker@gmail.com>"]
@@ -19,4 +19,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-demo = "coagents.demo:main"
+demo = "copilotkit.demo:main"
