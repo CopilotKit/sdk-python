@@ -12,7 +12,6 @@ sdk = CopilotKitSDK(
         LangGraphAgent(
             name="childrensBookAgent",
             description="Write a children's book.",
-            parameters=[],
             agent=graph,
         )
     ],
