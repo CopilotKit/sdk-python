@@ -11,7 +11,6 @@ from langchain.schema import SystemMessage
 
 from partialjson.json_parser import JSONParser
 
-from .parameter import BaseParameter, normalize_parameters
 from .types import Message
 from .langchain import copilotkit_messages_to_langchain
 
@@ -23,12 +22,10 @@ class Agent(ABC):
             *,
             name: str,
             description: Optional[str] = None,
-            parameters: Optional[List[BaseParameter]] = None,
             merge_state: Optional[callable] = None
         ):
         self.name = name
         self.description = description
-        self.parameters = parameters
         self.merge_state = merge_state
 
     @abstractmethod
@@ -46,8 +43,7 @@ class Agent(ABC):
         """Dict representation of the action"""
         return {
             'name': self.name,
-            'description': self.description or '',
-            'parameters': normalize_parameters(self.parameters),
+            'description': self.description or ''
         }
 
 def langgraph_default_merge_state( # pylint: disable=unused-argument
@@ -85,13 +81,11 @@ class LangGraphAgent(Agent):
             name: str,
             agent: CompiledGraph,
             description: Optional[str] = None,
-            parameters: Optional[List[BaseParameter]] = None,
             merge_state: Optional[callable] = langgraph_default_merge_state
         ):
         super().__init__(
             name=name,
             description=description,
-            parameters=parameters,
             merge_state=merge_state
         )
         self.agent = agent

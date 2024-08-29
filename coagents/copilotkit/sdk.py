@@ -88,7 +88,7 @@ class CopilotKitSDK:
         agents = self.agents(context) if callable(self.agents) else self.agents
         agent = next((agent for agent in agents if agent.name == name), None)
         if agent is None:
-            raise AgentNotFoundException(name)
+            raise AgentNotFoundException(name)        
 
         try:
             return agent.execute(
