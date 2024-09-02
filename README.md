@@ -1,48 +1,9 @@
-# Need to install:
+# CopilotKit python SDK (alpha)
 
-- poetry
-- jq
-
-# install
+Needs pre-release CopilotKit packages:
 
 ```
-poetry install
-```
-
-# configure (optional)
-
-```
-poetry config virtualenvs.in-project true
-```
-
-# run
-
-```
-poetry run uvicorn copilotkit.demo:app --reload
-```
-
-# list
-
-```
-curl -X POST http://localhost:8000/copilotkit/actions/list \
--H "Content-Type: application/json" \
--d '{"properties": {}}' | jq
-```
-
-# execute action
-
-```
-curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "greet", "parameters": {"name": "Markus"}}' | jq
-```
-
-# execute agent
-
-```
-curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "askUser", "parameters": {}}' | jq
-```
-
-# continue executing agent (!! replace threadId with the one from the previous response)
-
-```
-curl -X POST http://localhost:8000/copilotkit/actions/execute -H "Content-Type: application/json" -d '{"name": "askUser", "threadId": "ac75afdf-74bf-42f7-bf26-c50b69d31835", "state": {"name":"","copilot":{"ask":{"question":"What is your name?","answer":"Markus"}}}}' | jq
+@copilotkit/react-core@1.1.1-feat-runtime-remote-actions.5
+@copilotkit/react-ui@1.1.1-feat-runtime-remote-actions.5
+@copilotkit/runtime@1.1.1-feat-runtime-remote-actions.5
 ```

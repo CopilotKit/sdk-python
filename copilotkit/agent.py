@@ -156,6 +156,7 @@ class LangGraphAgent(Agent):
         streaming_state_extractor = _StreamingStateExtractor({})
         initial_state = state if mode == "start" else None
         prev_node_name = None
+        emit_state_until_end = None
 
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             current_node_name = event.get("name")
@@ -165,9 +166,6 @@ class LangGraphAgent(Agent):
             metadata = event.get("metadata")
             emit_state = metadata.get("copilotkit:emit-state")
 
-            if emit_state and event_type == "on_chat_model_start":
-                # reset the streaming state extractor
-                streaming_state_extractor = _StreamingStateExtractor(emit_state)
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
@@ -178,15 +176,29 @@ class LangGraphAgent(Agent):
             if node_name is None:
                 continue
 
+            if emit_state and emit_state_until_end is None:
+                emit_state_until_end = node_name
+
+            if emit_state and event_type == "on_chat_model_start":
+                # reset the streaming state extractor
+                streaming_state_extractor = _StreamingStateExtractor(emit_state)
+
             updated_state = self.agent.get_state(config).values
 
             if emit_state and event_type == "on_chat_model_stream":
                 streaming_state_extractor.buffer_tool_calls(event)
 
-            updated_state = {
-                **updated_state,
-                **streaming_state_extractor.extract_state()
-            }
+            if emit_state_until_end is not None:
+                updated_state = {
+                    **updated_state,
+                    **streaming_state_extractor.extract_state()
+                }
+
+            if (not emit_state and
+                current_node_name == emit_state_until_end and 
+                event_type == "on_chain_end"):
+                # stop emitting function call state
+                emit_state_until_end = None
 
             exiting_node = node_name == current_node_name and event_type == "on_chain_end"
 
@@ -241,6 +253,8 @@ class _StreamingStateExtractor:
         self.tool_call_buffer = {}
         self.current_tool_call = None
 
+        self.previously_parsable_state = {}
+
     def buffer_tool_calls(self, event: dict):
         """Buffer the tool calls"""
         if len(event["data"]["chunk"].tool_call_chunks) > 0:
@@ -278,7 +292,12 @@ class _StreamingStateExtractor:
             try:
                 parsed_value = parser.parse(value)
             except Exception as _exc: # pylint: disable=broad-except
-                continue
+                if key in self.previously_parsable_state:
+                    parsed_value = self.previously_parsable_state[key]
+                else:
+                    continue
+
+            self.previously_parsable_state[key] = parsed_value
 
             if argument_name is None:
                 state[state_key] = parsed_value
