@@ -156,7 +156,7 @@ class LangGraphAgent(Agent):
         streaming_state_extractor = _StreamingStateExtractor({})
         initial_state = state if mode == "start" else None
         prev_node_name = None
-        emit_state_until_end = None
+        emit_intermediate_state_until_end = None
 
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             current_node_name = event.get("name")
@@ -164,7 +164,7 @@ class LangGraphAgent(Agent):
             run_id = event.get("run_id")
 
             metadata = event.get("metadata")
-            emit_state = metadata.get("copilotkit:emit-state")
+            emit_intermediate_state = metadata.get("copilotkit:emit-intermediate-state")
 
 
             # we only want to update the node name under certain conditions
@@ -176,29 +176,29 @@ class LangGraphAgent(Agent):
             if node_name is None:
                 continue
 
-            if emit_state and emit_state_until_end is None:
-                emit_state_until_end = node_name
+            if emit_intermediate_state and emit_intermediate_state_until_end is None:
+                emit_intermediate_state_until_end = node_name
 
-            if emit_state and event_type == "on_chat_model_start":
+            if emit_intermediate_state and event_type == "on_chat_model_start":
                 # reset the streaming state extractor
-                streaming_state_extractor = _StreamingStateExtractor(emit_state)
+                streaming_state_extractor = _StreamingStateExtractor(emit_intermediate_state)
 
             updated_state = self.agent.get_state(config).values
 
-            if emit_state and event_type == "on_chat_model_stream":
+            if emit_intermediate_state and event_type == "on_chat_model_stream":
                 streaming_state_extractor.buffer_tool_calls(event)
 
-            if emit_state_until_end is not None:
+            if emit_intermediate_state_until_end is not None:
                 updated_state = {
                     **updated_state,
                     **streaming_state_extractor.extract_state()
                 }
 
-            if (not emit_state and
-                current_node_name == emit_state_until_end and 
+            if (not emit_intermediate_state and
+                current_node_name == emit_intermediate_state_until_end and 
                 event_type == "on_chain_end"):
                 # stop emitting function call state
-                emit_state_until_end = None
+                emit_intermediate_state_until_end = None
 
             exiting_node = node_name == current_node_name and event_type == "on_chain_end"
 
@@ -248,8 +248,8 @@ class LangGraphAgent(Agent):
         }
 
 class _StreamingStateExtractor:
-    def __init__(self, emit_state: dict):
-        self.emit_state = emit_state
+    def __init__(self, emit_intermediate_state: List[dict]):
+        self.emit_intermediate_state = emit_intermediate_state
         self.tool_call_buffer = {}
         self.current_tool_call = None
 
@@ -270,9 +270,13 @@ class _StreamingStateExtractor:
     def get_emit_state_config(self, current_tool_name):
         """Get the emit state config"""
 
-        for key, value in self.emit_state.items():
-            if current_tool_name == value.get("tool"):
-                return (value.get("argument"), key)
+        for config in self.emit_intermediate_state:
+            state_key = config.get("state_key")
+            tool = config.get("tool")
+            tool_argument = config.get("tool_argument")
+
+            if current_tool_name == tool:
+                return (tool_argument, state_key)
 
         return (None, None)
 

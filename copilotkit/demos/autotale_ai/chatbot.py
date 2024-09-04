@@ -26,16 +26,23 @@ async def chatbot_node(state: AgentState, config: RunnableConfig):
     config = configure_copilotkit(
         config,
         emit_messages=True,
-        emit_state={
-            "outline": {
+        emit_intermediate_state= [
+            {
+                "state_key": "outline",
                 "tool": "set_outline",
-                "argument": "outline"
+                "tool_argument": "outline"
             },
-            "characters": {
+            {
+                "state_key": "characters",
                 "tool": "set_characters",
-                "argument": "characters"
+                "tool_argument": "characters"
             },
-        }
+            {
+                "state_key": "story",
+                "tool": "set_story",
+                "tool_argument": "story"
+            }
+        ]
     )
 
     tools = [set_outline, set_style]

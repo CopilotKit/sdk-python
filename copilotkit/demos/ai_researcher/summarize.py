@@ -18,11 +18,12 @@ async def summarize_node(state: AgentState, config: RunnableConfig):
     config = configure_copilotkit(
         config,
         emit_messages=True,
-        emit_state={
-            "answer": {
-                "tool": "summarize"
+        emit_intermediate_state=[
+            {
+                "state_key": "answer",
+                "tool": "summarize",
             },
-        }
+        ]
     )
 
     system_message = f"""

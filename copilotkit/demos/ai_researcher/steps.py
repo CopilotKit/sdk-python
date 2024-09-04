@@ -20,12 +20,13 @@ async def steps_node(state: AgentState, config: RunnableConfig):
     config = configure_copilotkit(
         config,
         emit_messages=True,
-        emit_state={
-            "steps": {
+        emit_intermediate_state=[
+            {
+                "state_key": "steps",
                 "tool": "search",
-                "argument": "steps"
+                "tool_argument": "steps"
             },
-        }
+        ]
     )
 
     system_message = """

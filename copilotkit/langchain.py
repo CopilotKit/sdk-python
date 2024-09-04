@@ -49,7 +49,7 @@ def configure_copilotkit(
         emit_tool_calls: bool = False,
         emit_messages: bool = False,
         emit_all: bool = False,
-        emit_state: Optional[dict] = None
+        emit_intermediate_state: Optional[list] = None
     ):
     """
     Configure for LangChain for use in CopilotKit
@@ -62,8 +62,8 @@ def configure_copilotkit(
     if emit_messages or emit_all:
         tags.append("copilotkit:emit-messages")
 
-    if emit_state:
-        metadata["copilotkit:emit-state"] = emit_state
+    if emit_intermediate_state:
+        metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
 
     config = (config or {}).copy()
     config["tags"] = tags
