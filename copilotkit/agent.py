@@ -157,6 +157,7 @@ class LangGraphAgent(Agent):
         initial_state = state if mode == "start" else None
         prev_node_name = None
         emit_intermediate_state_until_end = None
+        should_exit = False
 
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             current_node_name = event.get("name")
