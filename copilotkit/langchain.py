@@ -69,3 +69,10 @@ def configure_copilotkit(
     config["tags"] = tags
     config["metadata"] = metadata
     return ensure_config(config)
+
+def exit_copilotkit(config: RunnableConfig):
+    """
+    Exit CopilotKit
+    """
+    config.get("callbacks").add_metadata({"copilotkit:exit": True})
+

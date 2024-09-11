@@ -163,7 +163,10 @@ class LangGraphAgent(Agent):
             event_type = event.get("event")
             run_id = event.get("run_id")
 
+
             metadata = event.get("metadata")
+            should_exit = should_exit or metadata.get("copilotkit:exit") is True
+
             emit_intermediate_state = metadata.get("copilotkit:emit-intermediate-state")
 
 
@@ -229,11 +232,7 @@ class LangGraphAgent(Agent):
             run_id=run_id,
             node_name=node_name if not is_end_node else "__end__",
             state=state.values,
-            # For now, we assume that the agent is always running
-            # In the future, we will have a special node that will
-            # indicate that the agent is done
-            running=True,
-
+            running=not should_exit,
             # at this point, the node is ending so we set active to false
             active=False
         ) + "\n"
