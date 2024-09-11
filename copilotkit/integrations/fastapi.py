@@ -1,5 +1,7 @@
 """FastAPI integration"""
 
+import logging
+
 from typing import List
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -12,6 +14,8 @@ from ..exc import (
     AgentExecutionException,
 )
 
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
 
 def add_fastapi_endpoint(fastapi_app: FastAPI, sdk: CopilotKitSDK, prefix: str):
     """Add FastAPI endpoint"""
@@ -106,8 +110,13 @@ async def handle_execute_action(
         )
         return JSONResponse(content=result)
     except ActionNotFoundException as exc:
+        logger.error("Action not found: %s", exc)
         return JSONResponse(content={"error": str(exc)}, status_code=404)
     except ActionExecutionException as exc:
+        logger.error("Action execution error: %s", exc)
+        return JSONResponse(content={"error": str(exc)}, status_code=500)
+    except Exception as exc: # pylint: disable=broad-except
+        logger.error("Action execution error: %s", exc)
         return JSONResponse(content={"error": str(exc)}, status_code=500)
 
 def handle_execute_agent( # pylint: disable=too-many-arguments
@@ -134,6 +143,11 @@ def handle_execute_agent( # pylint: disable=too-many-arguments
         )
         return StreamingResponse(events, media_type="application/json")
     except AgentNotFoundException as exc:
+        logger.error("Agent not found: %s", exc)
         return JSONResponse(content={"error": str(exc)}, status_code=404)
     except AgentExecutionException as exc:
+        logger.error("Agent execution error: %s", exc)
+        return JSONResponse(content={"error": str(exc)}, status_code=500)
+    except Exception as exc: # pylint: disable=broad-except
+        logger.error("Agent execution error: %s", exc)
         return JSONResponse(content={"error": str(exc)}, status_code=500)
