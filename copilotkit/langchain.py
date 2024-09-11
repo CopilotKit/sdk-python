@@ -10,8 +10,7 @@ from langchain_core.messages import (
     AIMessage,
     ToolMessage
 )
-from langchain_core.runnables import RunnableConfig
-from langchain_core.runnables.config import ensure_config
+from langchain_core.runnables import RunnableConfig, RunnableGenerator
 
 from .types import Message
 def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessage]:
@@ -65,14 +64,29 @@ def configure_copilotkit(
     if emit_intermediate_state:
         metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
 
-    config = (config or {}).copy()
-    config["tags"] = tags
-    config["metadata"] = metadata
-    return ensure_config(config)
+    config = config or {}
 
-def exit_copilotkit(config: RunnableConfig):
+    return {
+        **config,
+        "tags": tags,
+        "metadata": metadata
+    }
+
+async def _exit_copilotkit_generator(state): # pylint: disable=unused-argument
+    yield "Exit"
+
+
+async def exit_copilotkit(config: RunnableConfig):
     """
     Exit CopilotKit
     """
-    config.get("callbacks").add_metadata({"copilotkit:exit": True})
-
+    # For some reason, we need to use this workaround to get custom events to work
+    # dispatch_custom_event and friends don't seem to do anything
+    gen = RunnableGenerator(_exit_copilotkit_generator).with_config(
+        tags=["copilotkit:exit"],
+        callbacks=config.get(
+            "callbacks", []
+        ),
+    )
+    async for _message in gen.astream({}):
+        pass

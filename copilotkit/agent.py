@@ -163,13 +163,12 @@ class LangGraphAgent(Agent):
             current_node_name = event.get("name")
             event_type = event.get("event")
             run_id = event.get("run_id")
-
-
+            tags = event.get("tags")
             metadata = event.get("metadata")
-            should_exit = should_exit or metadata.get("copilotkit:exit") is True
+
+            should_exit = should_exit or "copilotkit:exit" in tags
 
             emit_intermediate_state = metadata.get("copilotkit:emit-intermediate-state")
-
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
@@ -228,6 +227,7 @@ class LangGraphAgent(Agent):
         is_end_node = state.next == ()
 
         node_name = list(state.metadata["writes"].keys())[0]
+
         yield self._emit_state_sync_event(
             thread_id=thread_id,
             run_id=run_id,
