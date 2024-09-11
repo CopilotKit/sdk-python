@@ -1,5 +1,7 @@
 """Test Joker Agent"""
 
+from typing import Any, cast
+
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.graph import MessagesState
@@ -61,7 +63,7 @@ async def joke_node(state: JokeAgentState, config: RunnableConfig):
         )
     ], config)
 
-    tool_calls = response.tool_calls
+    tool_calls = getattr(response, "tool_calls")
 
     joke = tool_calls[0]["args"]["the_joke"]
 
@@ -80,7 +82,7 @@ async def joke_node(state: JokeAgentState, config: RunnableConfig):
     }
 
 workflow = StateGraph(JokeAgentState)
-workflow.add_node("joke_node", joke_node)
+workflow.add_node("joke_node", cast(Any, joke_node))
 workflow.set_entry_point("joke_node")
 
 workflow.add_edge("joke_node", END)

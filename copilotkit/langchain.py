@@ -49,7 +49,7 @@ def configure_copilotkit(
         emit_messages: bool = False,
         emit_all: bool = False,
         emit_intermediate_state: Optional[list] = None
-    ):
+    ) -> RunnableConfig:
     """
     Configure for LangChain for use in CopilotKit
     """

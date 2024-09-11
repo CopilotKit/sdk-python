@@ -23,6 +23,7 @@ async def chatbot_node(state: AgentState, config: RunnableConfig):
     the next route.
     """
 
+
     config = configure_copilotkit(
         config,
         emit_messages=True,
@@ -98,7 +99,9 @@ tool. If not, just respond to the user.
         )
     ], config)
 
-    if not response.tool_calls:
+    tool_calls = getattr(response, "tool_calls", None)
+
+    if not tool_calls:
         return {
             "messages": response,
         }
@@ -107,9 +110,9 @@ tool. If not, just respond to the user.
         "messages": [
             response,
             ToolMessage(
-                name=response.tool_calls[0]["name"],
-                content=json.dumps(response.tool_calls[0]["args"]),
-                tool_call_id=response.tool_calls[0]["id"]
+                name=tool_calls[0]["name"],
+                content=json.dumps(tool_calls[0]["args"]),
+                tool_call_id=tool_calls[0]["id"]
             )
         ],
     }

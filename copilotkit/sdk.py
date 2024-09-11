@@ -1,8 +1,8 @@
 """CopilotKit SDK"""
 
-from typing import List, Callable, Union, Optional, TypedDict, Any
-from .agent import Agent
-from .action import Action
+from typing import List, Callable, Union, Optional, TypedDict, Any, Coroutine
+from .agent import Agent, AgentDict
+from .action import Action, ActionDict, ActionResultDict
 from .types import Message
 from .exc import (
     ActionNotFoundException,
@@ -11,6 +11,10 @@ from .exc import (
     AgentExecutionException
 )
 
+class InfoDict(TypedDict):
+    """Info dictionary"""
+    actions: List[ActionDict]
+    agents: List[AgentDict]
 
 class CopilotKitSDKContext(TypedDict):
     """CopilotKit SDK Context"""
@@ -22,8 +26,18 @@ class CopilotKitSDK:
     def __init__(
         self,
         *,
-        actions: Optional[Union[List[Action], Callable[[], List[Action]]]] = None,
-        agents: Optional[Union[List[Agent], Callable[[], List[Agent]]]] = None,
+        actions: Optional[
+            Union[
+                List[Action],
+                Callable[[CopilotKitSDKContext], List[Action]]
+            ]
+        ] = None,
+        agents: Optional[
+            Union[
+                List[Agent],
+                Callable[[CopilotKitSDKContext], List[Agent]]
+            ]
+        ] = None,
     ):
         self.agents = agents or []
         self.actions = actions or []
@@ -32,18 +46,17 @@ class CopilotKitSDK:
         self,
         *,
         context: CopilotKitSDKContext
-    ) -> List[Union[Action, Agent]]:
+    ) -> InfoDict:
         """Returns information about available actions and agents"""
 
         actions = self.actions(context) if callable(self.actions) else self.actions
         agents = self.agents(context) if callable(self.agents) else self.agents
 
-        result = {
+        return {
             "actions": [action.dict_repr() for action in actions],
             "agents": [agent.dict_repr() for agent in agents]
         }
-        return result
-    
+
     def _get_action(
         self,
         *,
@@ -63,7 +76,7 @@ class CopilotKitSDK:
             context: CopilotKitSDKContext,
             name: str,
             arguments: dict,
-    ) -> dict:
+    ) -> Coroutine[Any, Any, ActionResultDict]:
         """Execute an action"""
 
         action = self._get_action(context=context, name=name)
@@ -82,13 +95,13 @@ class CopilotKitSDK:
         node_name: str,
         state: dict,
         messages: List[Message],
-        actions: List[any],
-    ):
+        actions: List[ActionDict],
+    ) -> Any:
         """Execute an agent"""
         agents = self.agents(context) if callable(self.agents) else self.agents
         agent = next((agent for agent in agents if agent.name == name), None)
         if agent is None:
-            raise AgentNotFoundException(name)        
+            raise AgentNotFoundException(name)
 
         try:
             return agent.execute(

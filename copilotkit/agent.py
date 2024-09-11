@@ -1,19 +1,24 @@
 """Agents"""
 
-from typing import Optional, List
+from typing import Optional, List, TypedDict, Callable, Any, cast
 from abc import ABC, abstractmethod
 import uuid
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.load.load import load as langchain_load
-
 from langchain.schema import SystemMessage
+
 
 from partialjson.json_parser import JSONParser
 
 from .types import Message
 from .langchain import copilotkit_messages_to_langchain
+from .action import ActionDict
 
+class AgentDict(TypedDict):
+    """Agent dictionary"""
+    name: str
+    description: Optional[str]
 
 class Agent(ABC):
     """Agent class for CopilotKit"""
@@ -22,7 +27,7 @@ class Agent(ABC):
             *,
             name: str,
             description: Optional[str] = None,
-            merge_state: Optional[callable] = None
+            merge_state: Optional[Callable] = None
         ):
         self.name = name
         self.description = description
@@ -36,10 +41,11 @@ class Agent(ABC):
         messages: List[Message],
         thread_id: Optional[str] = None,
         node_name: Optional[str] = None,
+        actions: Optional[List[ActionDict]] = None,
     ):
         """Execute the agent"""
 
-    def dict_repr(self):
+    def dict_repr(self) -> AgentDict:
         """Dict representation of the action"""
         return {
             'name': self.name,
@@ -50,7 +56,7 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
         *,
         state: dict,
         messages: List[Message],
-        actions: List[any]
+        actions: List[Any]
     ):
     """Default merge state for LangGraph"""
     if len(messages) > 0 and isinstance(messages[0], SystemMessage):
@@ -59,10 +65,10 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
 
     # merge with existing messages
     merged_messages = list(map(langchain_load, state.get("messages", [])))
-    existing_message_ids = {message.id for message in merged_messages}
+    existing_message_ids = {message["id"] for message in merged_messages}
 
     for message in messages:
-        if message.id not in existing_message_ids:
+        if message["id"] not in existing_message_ids:
             merged_messages.append(message)
 
     return {
@@ -81,7 +87,7 @@ class LangGraphAgent(Agent):
             name: str,
             agent: CompiledGraph,
             description: Optional[str] = None,
-            merge_state: Optional[callable] = langgraph_default_merge_state
+            merge_state: Optional[Callable] = langgraph_default_merge_state
         ):
         super().__init__(
             name=name,
@@ -119,11 +125,11 @@ class LangGraphAgent(Agent):
         messages: List[Message],
         thread_id: Optional[str] = None,
         node_name: Optional[str] = None,
-        actions: Optional[List[any]] = None,
+        actions: Optional[List[Any]] = None,
     ):
 
         langchain_messages = copilotkit_messages_to_langchain(messages)
-        state = self.merge_state(
+        state = cast(Callable, self.merge_state)(
             state=state,
             messages=langchain_messages,
             actions=actions
@@ -132,7 +138,7 @@ class LangGraphAgent(Agent):
         mode = "continue" if thread_id and node_name != "__end__" else "start"
         thread_id = thread_id or str(uuid.uuid4())
 
-        config = {"configurable": {"thread_id": thread_id}}
+        config = cast(Any, {"configurable": {"thread_id": thread_id}})
         if mode == "continue":
             self.agent.update_state(config, state, as_node=node_name)
 
@@ -148,12 +154,12 @@ class LangGraphAgent(Agent):
             *,
             mode: str,
             thread_id: str,
-            state: dict,
+            state: Any,
             node_name: Optional[str] = None
         ):
 
-        config = {"configurable": {"thread_id": thread_id}}
-        streaming_state_extractor = _StreamingStateExtractor({})
+        config = cast(Any, {"configurable": {"thread_id": thread_id}})
+        streaming_state_extractor = _StreamingStateExtractor([])
         initial_state = state if mode == "start" else None
         prev_node_name = None
         emit_intermediate_state_until_end = None
@@ -163,8 +169,8 @@ class LangGraphAgent(Agent):
             current_node_name = event.get("name")
             event_type = event.get("event")
             run_id = event.get("run_id")
-            tags = event.get("tags")
-            metadata = event.get("metadata")
+            tags = event.get("tags", [])
+            metadata = event.get("metadata", {})
 
             should_exit = should_exit or "copilotkit:exit" in tags
 
@@ -231,7 +237,7 @@ class LangGraphAgent(Agent):
         yield self._emit_state_sync_event(
             thread_id=thread_id,
             run_id=run_id,
-            node_name=node_name if not is_end_node else "__end__",
+            node_name=cast(str, node_name) if not is_end_node else "__end__",
             state=state.values,
             running=not should_exit,
             # at this point, the node is ending so we set active to false
@@ -255,7 +261,7 @@ class _StreamingStateExtractor:
 
         self.previously_parsable_state = {}
 
-    def buffer_tool_calls(self, event: dict):
+    def buffer_tool_calls(self, event: Any):
         """Buffer the tool calls"""
         if len(event["data"]["chunk"].tool_call_chunks) > 0:
             chunk = event["data"]["chunk"].tool_call_chunks[0]

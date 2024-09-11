@@ -4,6 +4,8 @@ It defines the workflow graph and the entry point for the agent.
 """
 # pylint: disable=line-too-long, unused-import
 
+from typing import Any, cast
+
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -29,11 +31,11 @@ def route_story_writing(state):
 
 # Define a new graph
 workflow = StateGraph(AgentState)
-workflow.add_node("chatbot_node", chatbot_node)
+workflow.add_node("chatbot_node", cast(Any, chatbot_node))
 workflow.add_node("outline_node", outline_node)
 workflow.add_node("characters_node", characters_node)
 workflow.add_node("style_node", style_node)
-workflow.add_node("story_node", story_node)
+workflow.add_node("story_node", cast(Any, story_node))
 
 # Chatbot
 workflow.set_entry_point("chatbot_node")

@@ -1,5 +1,6 @@
 """Test Joker Agent"""
 
+from typing import Any, cast
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.graph import MessagesState
@@ -61,9 +62,7 @@ async def email_node(state: EmailAgentState, config: RunnableConfig):
         )
     ], config)
 
-    tool_calls = response.tool_calls
-
-    print(tool_calls)
+    tool_calls = getattr(response, "tool_calls")
 
     email = tool_calls[0]["args"]["the_email"]
 
@@ -82,7 +81,7 @@ async def email_node(state: EmailAgentState, config: RunnableConfig):
     }
 
 workflow = StateGraph(EmailAgentState)
-workflow.add_node("email_node", email_node)
+workflow.add_node("email_node", cast(Any, email_node))
 workflow.set_entry_point("email_node")
 
 workflow.add_edge("email_node", END)

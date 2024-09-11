@@ -21,11 +21,13 @@ sdk = CopilotKitSDK(
             name="greet_user",
             description="Greet the user.",
             handler=greet_user,
-            parameters=[{
-                "name": "name",
-                "description": "The name of the user to greet.",
-                "type": "string",
-            }]
+            parameters=[
+                {
+                    "name": "name",
+                    "description": "The name of the user to greet.",
+                    "type": "string",
+                }
+            ]
         ),
     ],
     agents=[

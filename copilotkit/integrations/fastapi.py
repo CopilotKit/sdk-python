@@ -2,7 +2,7 @@
 
 import logging
 
-from typing import List
+from typing import List, Any, cast
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from ..sdk import CopilotKitSDK, CopilotKitSDKContext
@@ -13,6 +13,7 @@ from ..exc import (
     AgentNotFoundException,
     AgentExecutionException,
 )
+from ..action import ActionDict
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ def add_fastapi_endpoint(fastapi_app: FastAPI, sdk: CopilotKitSDK, prefix: str):
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     )
 
-def body_get_or_raise(body: any, key: str):
+def body_get_or_raise(body: Any, key: str):
     """Get value from body or raise an error"""
     value = body.get(key)
     if value is None:
@@ -49,7 +50,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
 
     path = request.path_params.get('path')
     method = request.method
-    context = {"properties": body.get("properties", {})}
+    context = cast(CopilotKitSDKContext, {"properties": body.get("properties", {})})
 
     if method == 'POST' and path == 'info':
         return await handle_info(sdk=sdk, context=context)
@@ -72,7 +73,7 @@ async def handler(request: Request, sdk: CopilotKitSDK):
         name = body_get_or_raise(body, "name")
         state = body_get_or_raise(body, "state")
         messages = body_get_or_raise(body, "messages")
-        actions = body.get("actions", [])
+        actions = cast(List[ActionDict], body.get("actions", []))
 
         return handle_execute_agent(
             sdk=sdk,
@@ -128,7 +129,7 @@ def handle_execute_agent( # pylint: disable=too-many-arguments
         name: str,
         state: dict,
         messages: List[Message],
-        actions: List[any],
+        actions: List[ActionDict],
     ):
     """Handle continue agent execution request with FastAPI"""
     try:
