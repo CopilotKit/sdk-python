@@ -1,13 +1,13 @@
 """Parameter classes for CopilotKit"""
 
-from typing import TypedDict, Optional, Literal, List, Union
+from typing import TypedDict, Optional, Literal, List, Union, NotRequired
 
 class Parameter(TypedDict):
     """Base parameter class"""
     name: str
-    description: Optional[str]
-    required: Optional[bool]
-    type: Optional[
+    description: NotRequired[str]
+    required: NotRequired[bool]
+    type: NotRequired[
         Union[
             str,
             Literal[
@@ -22,7 +22,7 @@ class Parameter(TypedDict):
             ]
         ]
     ]
-    attributes: Optional[List['Parameter']]
+    attributes: NotRequired[List['Parameter']]
 
 def normalize_parameters(parameters: Optional[List[Parameter]]) -> List[Parameter]:
     """Normalize the parameters to ensure they have the correct type and format."""
@@ -39,6 +39,6 @@ def _normalize_parameter(parameter: Parameter) -> Parameter:
     if not hasattr(parameter, 'description'):
         parameter['description'] = ''
 
-    if parameter['type'] == 'object' or parameter['type'] == 'object[]':
+    if 'type' in parameter and (parameter['type'] == 'object' or parameter['type'] == 'object[]'):
         parameter['attributes'] = normalize_parameters(parameter.get('attributes'))
     return parameter

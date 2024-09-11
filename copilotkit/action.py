@@ -23,7 +23,7 @@ class Action:  # pylint: disable=too-few-public-methods
             name: str,
             handler: Callable,
             description: Optional[str] = None,
-            parameters: Optional[List[Dict[str, Any]]] = None,
+            parameters: Optional[List[Parameter]] = None,
         ):
         self.name = name
         self.description = description
