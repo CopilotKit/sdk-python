@@ -90,3 +90,5 @@ async def exit_copilotkit(config: RunnableConfig):
     )
     async for _message in gen.astream({}):
         pass
+    
+    return True
