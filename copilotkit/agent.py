@@ -65,7 +65,7 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
 
     # merge with existing messages
     merged_messages = list(map(langchain_load, state.get("messages", [])))
-    existing_message_ids = {message["id"] for message in merged_messages}
+    existing_message_ids = {message.id for message in merged_messages}
 
     for message in messages:
         if message.id not in existing_message_ids:

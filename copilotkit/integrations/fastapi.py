@@ -144,11 +144,11 @@ def handle_execute_agent( # pylint: disable=too-many-arguments
         )
         return StreamingResponse(events, media_type="application/json")
     except AgentNotFoundException as exc:
-        logger.error("Agent not found: %s", exc)
+        logger.error("Agent not found: %s", exc, exc_info=True)
         return JSONResponse(content={"error": str(exc)}, status_code=404)
     except AgentExecutionException as exc:
-        logger.error("Agent execution error: %s", exc)
+        logger.error("Agent execution error: %s", exc, exc_info=True)
         return JSONResponse(content={"error": str(exc)}, status_code=500)
     except Exception as exc: # pylint: disable=broad-except
-        logger.error("Agent execution error: %s", exc)
+        logger.error("Agent execution error: %s", exc, exc_info=True)
         return JSONResponse(content={"error": str(exc)}, status_code=500)
