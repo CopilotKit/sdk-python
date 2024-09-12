@@ -6,7 +6,7 @@ import uuid
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.load.load import load as langchain_load
-from langchain.schema import SystemMessage
+from langchain.schema import BaseMessage, SystemMessage, AIMessage, HumanMessage
 
 
 from partialjson.json_parser import JSONParser
@@ -55,7 +55,7 @@ class Agent(ABC):
 def langgraph_default_merge_state( # pylint: disable=unused-argument
         *,
         state: dict,
-        messages: List[Message],
+        messages: List[BaseMessage],
         actions: List[Any]
     ):
     """Default merge state for LangGraph"""
@@ -68,8 +68,11 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
     existing_message_ids = {message["id"] for message in merged_messages}
 
     for message in messages:
-        if message["id"] not in existing_message_ids:
-            merged_messages.append(message)
+        if message.id not in existing_message_ids:
+            if isinstance(message, AIMessage) and message.tool_calls is not None:
+                continue
+            if isinstance(message, (HumanMessage, SystemMessage, AIMessage)):
+                merged_messages.append(message)
 
     return {
         **state,
