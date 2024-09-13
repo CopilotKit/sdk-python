@@ -1,36 +1,42 @@
 """Parameter classes for CopilotKit"""
 
-from typing import TypedDict, Optional, Literal, List, Union, NotRequired, cast, Any
+import sys
+from typing import TypedDict, Optional, Literal, List, Union, cast, Any
 
-class SimpleParameter(TypedDict):
-    """Simple parameter class"""
-    name: str
-    description: NotRequired[str]
-    required: NotRequired[bool]
-    type: NotRequired[Literal[
-        "number", 
-        "boolean",
-        "number[]", 
-        "boolean[]"
-    ]]
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
 
-class ObjectParameter(TypedDict):
-    """Object parameter class"""
-    name: str
-    description: NotRequired[str]
-    required: NotRequired[bool]
-    type: Literal["object", "object[]"]
-    attributes: List['Parameter']
+    class SimpleParameter(TypedDict):
+        """Simple parameter class"""
+        name: str
+        description: NotRequired[str]
+        required: NotRequired[bool]
+        type: NotRequired[Literal[
+            "number", 
+            "boolean",
+            "number[]", 
+            "boolean[]"
+        ]]
 
-class StringParameter(TypedDict):
-    """String parameter class"""
-    name: str
-    description: NotRequired[str]
-    required: NotRequired[bool]
-    type: Literal["string", "string[]"]
-    enum: NotRequired[List[str]]
+    class ObjectParameter(TypedDict):
+        """Object parameter class"""
+        name: str
+        description: NotRequired[str]
+        required: NotRequired[bool]
+        type: Literal["object", "object[]"]
+        attributes: List['Parameter']
 
-Parameter = Union[SimpleParameter, ObjectParameter, StringParameter]
+    class StringParameter(TypedDict):
+        """String parameter class"""
+        name: str
+        description: NotRequired[str]
+        required: NotRequired[bool]
+        type: Literal["string", "string[]"]
+        enum: NotRequired[List[str]]
+
+    Parameter = Union[SimpleParameter, ObjectParameter, StringParameter]
+else:
+    Parameter = Any
 
 def normalize_parameters(parameters: Optional[List[Parameter]]) -> List[Parameter]:
     """Normalize the parameters to ensure they have the correct type and format."""
@@ -48,5 +54,5 @@ def _normalize_parameter(parameter: Parameter) -> Parameter:
         parameter['description'] = ''
 
     if 'type' in parameter and (parameter['type'] == 'object' or parameter['type'] == 'object[]'):
-        parameter['attributes'] = normalize_parameters(parameter.get('attributes'))
+        cast(Any, parameter)['attributes'] = normalize_parameters(parameter.get('attributes'))
     return parameter
