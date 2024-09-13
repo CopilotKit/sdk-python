@@ -1,5 +1,6 @@
 """CopilotKit SDK"""
 
+from pprint import pformat
 from typing import List, Callable, Union, Optional, TypedDict, Any, Coroutine
 from .agent import Agent, AgentDict
 from .action import Action, ActionDict, ActionResultDict
@@ -10,6 +11,9 @@ from .exc import (
     ActionExecutionException,
     AgentExecutionException
 )
+from .logging import get_logger, bold
+
+logger = get_logger(__name__)
 
 class InfoDict(TypedDict):
     """Info dictionary"""
@@ -52,9 +56,22 @@ class CopilotKitSDK:
         actions = self.actions(context) if callable(self.actions) else self.actions
         agents = self.agents(context) if callable(self.agents) else self.agents
 
+        actions_list = [action.dict_repr() for action in actions]
+        agents_list = [agent.dict_repr() for agent in agents]
+
+        logger.debug(bold("Handling info request:"))
+        logger.debug("--------------------------")
+        logger.debug(bold("Context:"))
+        logger.debug(pformat(context))
+        logger.debug(bold("Actions:"))
+        logger.debug(pformat(actions_list))
+        logger.debug(bold("Agents:"))
+        logger.debug(pformat(agents_list))
+        logger.debug("--------------------------")
+
         return {
-            "actions": [action.dict_repr() for action in actions],
-            "agents": [agent.dict_repr() for agent in agents]
+            "actions": actions_list,
+            "agents": agents_list
         }
 
     def _get_action(
@@ -81,8 +98,19 @@ class CopilotKitSDK:
 
         action = self._get_action(context=context, name=name)
 
+        logger.info(bold("Handling execute action request:"))
+        logger.info("--------------------------")
+        logger.info(bold("Context:"))
+        logger.info(pformat(context))
+        logger.info(bold("Action:"))
+        logger.info(pformat(action.dict_repr()))
+        logger.info(bold("Arguments:"))
+        logger.info(pformat(arguments))
+        logger.info("--------------------------")
+
         try:
-            return action.execute(arguments=arguments)
+            result = action.execute(arguments=arguments)
+            return result
         except Exception as error:
             raise ActionExecutionException(name, error) from error
 
@@ -102,6 +130,24 @@ class CopilotKitSDK:
         agent = next((agent for agent in agents if agent.name == name), None)
         if agent is None:
             raise AgentNotFoundException(name)
+
+        logger.info(bold("Handling execute agent request:"))
+        logger.info("--------------------------")
+        logger.info(bold("Context:"))
+        logger.info(pformat(context))
+        logger.info(bold("Agent:"))
+        logger.info(pformat(agent.dict_repr()))
+        logger.info(bold("Thread ID:"))
+        logger.info(thread_id)
+        logger.info(bold("Node Name:"))
+        logger.info(node_name)
+        logger.info(bold("State:"))
+        logger.info(pformat(state))
+        logger.info(bold("Messages:"))
+        logger.info(pformat(messages))
+        logger.info(bold("Actions:"))
+        logger.info(pformat(actions))
+        logger.info("--------------------------")
 
         try:
             return agent.execute(
