@@ -5,7 +5,7 @@ import uuid
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.schema import BaseMessage, SystemMessage
-
+from langchain_core.runnables import RunnableConfig
 
 from partialjson.json_parser import JSONParser
 
@@ -49,7 +49,8 @@ class LangGraphAgent(Agent):
             name: str,
             agent: CompiledGraph,
             description: Optional[str] = None,
-            merge_state: Optional[Callable] = langgraph_default_merge_state
+            merge_state: Optional[Callable] = langgraph_default_merge_state,
+            recursion_limit: Optional[int] = None
         ):
         super().__init__(
             name=name,
@@ -57,6 +58,7 @@ class LangGraphAgent(Agent):
             merge_state=merge_state
         )
         self.agent = agent
+        self.recursion_limit = recursion_limit
 
     def _emit_state_sync_event(
             self,
@@ -125,7 +127,14 @@ class LangGraphAgent(Agent):
             node_name: Optional[str] = None
         ):
 
-        config = cast(Any, {"configurable": {"thread_id": thread_id}})
+        if self.recursion_limit is not None:
+            config = RunnableConfig(
+                recursion_limit=self.recursion_limit,
+                configurable={"thread_id": thread_id}
+            )
+        else:
+            config = RunnableConfig(configurable={"thread_id": thread_id})
+
         streaming_state_extractor = _StreamingStateExtractor([])
         initial_state = state if mode == "start" else None
         prev_node_name = None
