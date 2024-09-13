@@ -179,6 +179,7 @@ class LangGraphAgent(Agent):
             should_exit = should_exit or "copilotkit:exit" in tags
 
             emit_intermediate_state = metadata.get("copilotkit:emit-intermediate-state")
+            force_emit_intermediate_state = "copilotkit:force-emit-intermediate-state" in tags
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
@@ -187,6 +188,21 @@ class LangGraphAgent(Agent):
 
             # we don't have a node name yet, so we can't update the state
             if node_name is None:
+                continue
+
+            exiting_node = node_name == current_node_name and event_type == "on_chain_end"
+
+            if force_emit_intermediate_state:
+                if event_type == "on_chain_end":
+                    state = cast(Any, event["data"])["output"]
+                    yield self._emit_state_sync_event(
+                        thread_id=thread_id,
+                        run_id=run_id,
+                        node_name=node_name,
+                        state=state,
+                        running=True,
+                        active=True
+                    ) + "\n"
                 continue
 
             if emit_intermediate_state and emit_intermediate_state_until_end is None:
@@ -212,8 +228,6 @@ class LangGraphAgent(Agent):
                 event_type == "on_chain_end"):
                 # stop emitting function call state
                 emit_intermediate_state_until_end = None
-
-            exiting_node = node_name == current_node_name and event_type == "on_chain_end"
 
             # we send state sync events when:
             #   a) the state has changed

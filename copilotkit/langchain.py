@@ -2,7 +2,7 @@
 LangChain specific utilities for CopilotKit
 """
 
-from typing import List, Optional
+from typing import List, Optional, Any
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
@@ -90,5 +90,27 @@ async def exit_copilotkit(config: RunnableConfig):
     )
     async for _message in gen.astream({}):
         pass
-    
+
+    return True
+
+def _emit_copilotkit_state_generator(state):
+    async def emit_state(_state: Any): # pylint: disable=unused-argument
+        yield state
+    return emit_state
+
+
+async def emit_copilotkit_state(state: Any, config: RunnableConfig):
+    """
+    Emit CopilotKit state
+    """
+    print("emit_copilotkit_state", state)
+    gen = RunnableGenerator(_emit_copilotkit_state_generator(state)).with_config(
+        tags=["copilotkit:force-emit-intermediate-state"],
+        callbacks=config.get(
+            "callbacks", []
+        ),
+    )
+    async for _message in gen.astream({}):
+        pass
+
     return True
