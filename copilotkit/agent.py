@@ -64,15 +64,12 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
         messages = messages[1:]
 
     # merge with existing messages
-    merged_messages = list(map(langchain_load, state.get("messages", [])))
+    merged_messages = state.get("messages", [])
     existing_message_ids = {message.id for message in merged_messages}
 
     for message in messages:
         if message.id not in existing_message_ids:
-            if isinstance(message, AIMessage) and message.tool_calls is not None:
-                continue
-            if isinstance(message, (HumanMessage, SystemMessage, AIMessage)):
-                merged_messages.append(message)
+            merged_messages.append(message)
 
     return {
         **state,
@@ -109,6 +106,9 @@ class LangGraphAgent(Agent):
             running: bool,
             active: bool
         ):
+        state_without_messages = {
+            k: v for k, v in state.items() if k != "messages"
+        }
         return langchain_dumps({
             "event": "on_copilotkit_state_sync",
             "thread_id": thread_id,
@@ -116,7 +116,7 @@ class LangGraphAgent(Agent):
             "agent_name": self.name,
             "node_name": node_name,
             "active": active,
-            "state": state,
+            "state": state_without_messages,
             "running": running,
             "role": "assistant"
         })
@@ -130,6 +130,9 @@ class LangGraphAgent(Agent):
         node_name: Optional[str] = None,
         actions: Optional[List[Any]] = None,
     ):
+        config = cast(Any, {"configurable": {"thread_id": thread_id}})
+        agent_state = self.agent.get_state(config)
+        state["messages"] = agent_state.values.get("messages", [])
 
         langchain_messages = copilotkit_messages_to_langchain(messages)
         state = cast(Callable, self.merge_state)(
@@ -141,7 +144,6 @@ class LangGraphAgent(Agent):
         mode = "continue" if thread_id and node_name != "__end__" else "start"
         thread_id = thread_id or str(uuid.uuid4())
 
-        config = cast(Any, {"configurable": {"thread_id": thread_id}})
         if mode == "continue":
             self.agent.update_state(config, state, as_node=node_name)
 
