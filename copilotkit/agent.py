@@ -33,7 +33,7 @@ class Agent(ABC):
         self.merge_state = merge_state
 
     @abstractmethod
-    def execute(
+    def execute( # pylint: disable=too-many-arguments
         self,
         *,
         state: dict,
