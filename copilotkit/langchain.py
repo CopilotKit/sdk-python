@@ -12,7 +12,8 @@ from langchain_core.messages import (
 )
 from langchain_core.runnables import RunnableConfig, RunnableGenerator
 
-from .types import Message
+from .types import Message, IntermediateStateConfig
+
 def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessage]:
     """
     Convert CopilotKit messages to LangChain messages
@@ -48,21 +49,29 @@ def configure_copilotkit(
         emit_tool_calls: bool = False,
         emit_messages: bool = False,
         emit_all: bool = False,
-        emit_intermediate_state: Optional[list] = None
+        emit_intermediate_state: Optional[List[IntermediateStateConfig]] = None
     ) -> RunnableConfig:
     """
     Configure for LangChain for use in CopilotKit
     """
-    tags = config.get("tags", []) if config else []
-    metadata = config.get("metadata", {}) if config else {}
+    tags = config.get("tags", []).copy() if config else []
+    metadata = config.get("metadata", {}).copy() if config else {}
 
     if emit_tool_calls or emit_all:
         tags.append("copilotkit:emit-tool-calls")
+    elif emit_tool_calls is False:
+        tags = [tag for tag in tags if tag != "copilotkit:emit-tool-calls"]
+
     if emit_messages or emit_all:
         tags.append("copilotkit:emit-messages")
+    elif emit_messages is False:
+        tags = [tag for tag in tags if tag != "copilotkit:emit-messages"]
 
     if emit_intermediate_state:
         metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
+
+    elif emit_intermediate_state is None:
+        del metadata["copilotkit:emit-intermediate-state"]
 
     config = config or {}
 

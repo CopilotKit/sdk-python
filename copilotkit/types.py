@@ -2,6 +2,7 @@
 
 from typing import TypedDict
 from enum import Enum
+from typing_extensions import NotRequired
 
 class MessageRole(Enum):
     """Message role"""
@@ -30,3 +31,9 @@ class ResultMessage(Message):
     actionExecutionId: str
     actionName: str
     result: str
+
+class IntermediateStateConfig(TypedDict):
+    """Intermediate state config"""
+    state_key: str
+    tool: str
+    tool_argument: NotRequired[str]

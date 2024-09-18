@@ -1,42 +1,37 @@
 """Parameter classes for CopilotKit"""
 
-import sys
 from typing import TypedDict, Optional, Literal, List, Union, cast, Any
+from typing_extensions import NotRequired
 
-if sys.version_info >= (3, 11):
-    from typing import NotRequired
+class SimpleParameter(TypedDict):
+    """Simple parameter class"""
+    name: str
+    description: NotRequired[str]
+    required: NotRequired[bool]
+    type: NotRequired[Literal[
+        "number", 
+        "boolean",
+        "number[]", 
+        "boolean[]"
+    ]]
 
-    class SimpleParameter(TypedDict):
-        """Simple parameter class"""
-        name: str
-        description: NotRequired[str]
-        required: NotRequired[bool]
-        type: NotRequired[Literal[
-            "number", 
-            "boolean",
-            "number[]", 
-            "boolean[]"
-        ]]
+class ObjectParameter(TypedDict):
+    """Object parameter class"""
+    name: str
+    description: NotRequired[str]
+    required: NotRequired[bool]
+    type: Literal["object", "object[]"]
+    attributes: List['Parameter']
 
-    class ObjectParameter(TypedDict):
-        """Object parameter class"""
-        name: str
-        description: NotRequired[str]
-        required: NotRequired[bool]
-        type: Literal["object", "object[]"]
-        attributes: List['Parameter']
+class StringParameter(TypedDict):
+    """String parameter class"""
+    name: str
+    description: NotRequired[str]
+    required: NotRequired[bool]
+    type: Literal["string", "string[]"]
+    enum: NotRequired[List[str]]
 
-    class StringParameter(TypedDict):
-        """String parameter class"""
-        name: str
-        description: NotRequired[str]
-        required: NotRequired[bool]
-        type: Literal["string", "string[]"]
-        enum: NotRequired[List[str]]
-
-    Parameter = Union[SimpleParameter, ObjectParameter, StringParameter]
-else:
-    Parameter = Any
+Parameter = Union[SimpleParameter, ObjectParameter, StringParameter]
 
 def normalize_parameters(parameters: Optional[List[Parameter]]) -> List[Parameter]:
     """Normalize the parameters to ensure they have the correct type and format."""
