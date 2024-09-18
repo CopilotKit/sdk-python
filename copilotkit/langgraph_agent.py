@@ -1,11 +1,11 @@
 """LangGraph agent for CopilotKit"""
 
-from typing import Optional, List, Callable, Any, cast
+from typing import Optional, List, Callable, Any, cast, Union
 import uuid
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.schema import BaseMessage, SystemMessage
-from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables import RunnableConfig, ensure_config
 
 from partialjson.json_parser import JSONParser
 
@@ -50,7 +50,7 @@ class LangGraphAgent(Agent):
             agent: CompiledGraph,
             description: Optional[str] = None,
             merge_state: Optional[Callable] = langgraph_default_merge_state,
-            recursion_limit: Optional[int] = None
+            config: Union[Optional[RunnableConfig], dict] = None
         ):
         super().__init__(
             name=name,
@@ -58,7 +58,7 @@ class LangGraphAgent(Agent):
             merge_state=merge_state
         )
         self.agent = agent
-        self.recursion_limit = recursion_limit
+        self.config = config
 
     def _emit_state_sync_event(
             self,
@@ -94,7 +94,10 @@ class LangGraphAgent(Agent):
         node_name: Optional[str] = None,
         actions: Optional[List[ActionDict]] = None,
     ):
-        config = cast(Any, {"configurable": {"thread_id": thread_id}})
+        config = ensure_config(cast(Any, self.config.copy()) if self.config else {})
+        config["configurable"] = config.get("configurable", {})
+        config["configurable"]["thread_id"] = thread_id
+
         agent_state = self.agent.get_state(config)
         state["messages"] = agent_state.values.get("messages", [])
 
@@ -113,7 +116,7 @@ class LangGraphAgent(Agent):
 
         return self._stream_events(
             mode=mode,
-            thread_id=thread_id,
+            config=config,
             state=state,
             node_name=node_name
         )
@@ -122,24 +125,17 @@ class LangGraphAgent(Agent):
             self,
             *,
             mode: str,
-            thread_id: str,
+            config: RunnableConfig,
             state: Any,
             node_name: Optional[str] = None
         ):
-
-        if self.recursion_limit is not None:
-            config = RunnableConfig(
-                recursion_limit=self.recursion_limit,
-                configurable={"thread_id": thread_id}
-            )
-        else:
-            config = RunnableConfig(configurable={"thread_id": thread_id})
 
         streaming_state_extractor = _StreamingStateExtractor([])
         initial_state = state if mode == "start" else None
         prev_node_name = None
         emit_intermediate_state_until_end = None
         should_exit = False
+        thread_id = cast(Any, config)["configurable"]["thread_id"]
 
         async for event in self.agent.astream_events(initial_state, config, version="v1"):
             current_node_name = event.get("name")
