@@ -17,6 +17,7 @@
     "autotale",
     "pydantic",
     "childrens",
-    "partialjson"
+    "partialjson",
+    "dotenv"
   ]
 }
