@@ -8,8 +8,7 @@ import uvicorn
 from copilotkit.integrations.fastapi import add_fastapi_endpoint
 from copilotkit import CopilotKitSDK, LangGraphAgent
 from copilotkit.demos.starter.agent import graph
-from copilotkit.langchain import configure_copilotkit
-
+from copilotkit.langchain import copilotkit_customize_config
 
 app = FastAPI()
 sdk = CopilotKitSDK(
@@ -18,9 +17,12 @@ sdk = CopilotKitSDK(
             name="translate_agent",
             description="Translate agent that translates text.",
             agent=graph,
-            config=configure_copilotkit(
-                emit_messages=True
-            )
+            config=copilotkit_customize_config(
+                base_config={
+                    "recursion_limit": 10,
+                },
+                emit_messages=True,
+            ),
         )
     ],
 )

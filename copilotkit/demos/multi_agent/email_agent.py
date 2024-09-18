@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import SystemMessage, ToolMessage
 
 
-from copilotkit.langchain import configure_copilotkit, exit_copilotkit
+from copilotkit.langchain import copilotkit_customize_config, copilotkit_exit
 
 class EmailAgentState(MessagesState):
     """Email Agent State"""
@@ -20,7 +20,7 @@ async def email_node(state: EmailAgentState, config: RunnableConfig):
     Make a joke.
     """
 
-    config = configure_copilotkit(
+    config = copilotkit_customize_config(
         config,
         emit_messages=True,
         emit_intermediate_state=[
@@ -66,7 +66,7 @@ async def email_node(state: EmailAgentState, config: RunnableConfig):
 
     email = tool_calls[0]["args"]["the_email"]
 
-    await exit_copilotkit(config)
+    await copilotkit_exit(config)
 
     return {
         "messages": [

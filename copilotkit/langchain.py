@@ -43,8 +43,8 @@ def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessag
             ))
     return result
 
-def configure_copilotkit(
-        config: Optional[RunnableConfig] = None,
+def copilotkit_customize_config(
+        base_config: Optional[RunnableConfig] = None,
         *,
         emit_tool_calls: bool = False,
         emit_messages: bool = False,
@@ -54,8 +54,8 @@ def configure_copilotkit(
     """
     Configure for LangChain for use in CopilotKit
     """
-    tags = config.get("tags", []).copy() if config else []
-    metadata = config.get("metadata", {}).copy() if config else {}
+    tags = base_config.get("tags", []).copy() if base_config else []
+    metadata = base_config.get("metadata", {}).copy() if base_config else {}
 
     if emit_tool_calls or emit_all:
         tags.append("copilotkit:emit-tool-calls")
@@ -73,10 +73,10 @@ def configure_copilotkit(
     elif emit_intermediate_state is None:
         del metadata["copilotkit:emit-intermediate-state"]
 
-    config = config or {}
+    base_config = base_config or {}
 
     return {
-        **config,
+        **base_config,
         "tags": tags,
         "metadata": metadata
     }
@@ -85,7 +85,7 @@ async def _exit_copilotkit_generator(state): # pylint: disable=unused-argument
     yield "Exit"
 
 
-async def exit_copilotkit(config: RunnableConfig):
+async def copilotkit_exit(config: RunnableConfig):
     """
     Exit CopilotKit
     """
@@ -108,11 +108,10 @@ def _emit_copilotkit_state_generator(state):
     return emit_state
 
 
-async def emit_copilotkit_state(state: Any, config: RunnableConfig):
+async def copilotkit_emit_state(state: Any, config: RunnableConfig):
     """
     Emit CopilotKit state
     """
-    print("emit_copilotkit_state", state)
     gen = RunnableGenerator(_emit_copilotkit_state_generator(state)).with_config(
         tags=["copilotkit:force-emit-intermediate-state"],
         callbacks=config.get(

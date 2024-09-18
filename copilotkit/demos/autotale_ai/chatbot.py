@@ -14,7 +14,7 @@ from copilotkit.demos.autotale_ai.story.outline import set_outline
 from copilotkit.demos.autotale_ai.story.characters import set_characters
 from copilotkit.demos.autotale_ai.story.story import set_story
 from copilotkit.demos.autotale_ai.story.style import set_style
-from copilotkit.langchain import configure_copilotkit
+from copilotkit.langchain import copilotkit_customize_config
 # pylint: disable=line-too-long
 
 async def chatbot_node(state: AgentState, config: RunnableConfig):
@@ -24,7 +24,7 @@ async def chatbot_node(state: AgentState, config: RunnableConfig):
     """
 
 
-    config = configure_copilotkit(
+    config = copilotkit_customize_config(
         config,
         emit_messages=True,
         emit_intermediate_state= [

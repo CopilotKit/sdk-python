@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import SystemMessage, ToolMessage
 
 
-from copilotkit.langchain import configure_copilotkit, exit_copilotkit
+from copilotkit.langchain import copilotkit_customize_config, copilotkit_exit
 
 class JokeAgentState(MessagesState):
     """Joke Agent State"""
@@ -21,7 +21,7 @@ async def joke_node(state: JokeAgentState, config: RunnableConfig):
     Make a joke.
     """
 
-    config = configure_copilotkit(
+    config = copilotkit_customize_config(
         config,
         emit_messages=True,
         emit_intermediate_state=[
@@ -67,7 +67,7 @@ async def joke_node(state: JokeAgentState, config: RunnableConfig):
 
     joke = tool_calls[0]["args"]["the_joke"]
 
-    await exit_copilotkit(config)
+    await copilotkit_exit(config)
 
     return {
         "messages": [

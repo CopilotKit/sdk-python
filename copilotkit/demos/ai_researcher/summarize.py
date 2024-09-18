@@ -6,7 +6,7 @@ import json
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
-from copilotkit.langchain import configure_copilotkit
+from copilotkit.langchain import copilotkit_customize_config
 
 from copilotkit.demos.ai_researcher.state import AgentState
 
@@ -15,7 +15,7 @@ async def summarize_node(state: AgentState, config: RunnableConfig):
     The summarize node is responsible for summarizing the information.
     """
 
-    config = configure_copilotkit(
+    config = copilotkit_customize_config(
         config,
         emit_messages=True,
         emit_intermediate_state=[
