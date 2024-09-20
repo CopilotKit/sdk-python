@@ -41,11 +41,11 @@ def normalize_parameters(parameters: Optional[List[Parameter]]) -> List[Paramete
 
 def _normalize_parameter(parameter: Parameter) -> Parameter:
     """Normalize a parameter to ensure it has the correct type and format."""
-    if not hasattr(parameter, 'type'):
+    if not "type" in parameter:
         cast(Any, parameter)['type'] = 'string'
-    if not hasattr(parameter, 'required'):
+    if not 'required' in parameter:
         parameter['required'] = True
-    if not hasattr(parameter, 'description'):
+    if not 'description' in parameter:
         parameter['description'] = ''
 
     if 'type' in parameter and (parameter['type'] == 'object' or parameter['type'] == 'object[]'):
