@@ -69,8 +69,7 @@ def copilotkit_customize_config(
 
     if emit_intermediate_state:
         metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
-
-    elif emit_intermediate_state is None:
+    elif emit_intermediate_state and "copilotkit:emit-intermediate-state" in metadata:
         del metadata["copilotkit:emit-intermediate-state"]
 
     base_config = base_config or {}
