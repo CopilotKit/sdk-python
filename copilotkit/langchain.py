@@ -54,23 +54,16 @@ def copilotkit_customize_config(
     """
     Configure for LangChain for use in CopilotKit
     """
-    tags = base_config.get("tags", []).copy() if base_config else []
-    metadata = base_config.get("metadata", {}).copy() if base_config else {}
+    tags = base_config.get("tags", []) if base_config else []
+    metadata = base_config.get("metadata", {}) if base_config else {}
 
     if emit_tool_calls or emit_all:
         tags.append("copilotkit:emit-tool-calls")
-    elif emit_tool_calls is False:
-        tags = [tag for tag in tags if tag != "copilotkit:emit-tool-calls"]
-
     if emit_messages or emit_all:
         tags.append("copilotkit:emit-messages")
-    elif emit_messages is False:
-        tags = [tag for tag in tags if tag != "copilotkit:emit-messages"]
 
     if emit_intermediate_state:
         metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
-    elif emit_intermediate_state and "copilotkit:emit-intermediate-state" in metadata:
-        del metadata["copilotkit:emit-intermediate-state"]
 
     base_config = base_config or {}
 

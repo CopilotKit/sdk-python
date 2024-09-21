@@ -110,6 +110,7 @@ class LangGraphAgent(Agent):
 
         mode = "continue" if thread_id and node_name != "__end__" else "start"
         thread_id = thread_id or str(uuid.uuid4())
+        config["configurable"]["thread_id"] = thread_id
 
         if mode == "continue":
             self.agent.update_state(config, state, as_node=node_name)
