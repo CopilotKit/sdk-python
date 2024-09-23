@@ -8,8 +8,8 @@ from copilotkit.integrations.fastapi import add_fastapi_endpoint
 from copilotkit import CopilotKitSDK, Action, LangGraphAgent
 from copilotkit.demos.multi_agent.joke_agent import joke_graph
 from copilotkit.demos.multi_agent.email_agent import email_graph
-
-
+from copilotkit.demos.multi_agent.pirate_agent import pirate_graph
+from copilotkit.langchain import copilotkit_customize_config
 def greet_user(name):
     """Greet the user."""
     print(f"Hello, {name}!")
@@ -41,6 +41,11 @@ sdk = CopilotKitSDK(
             name="email_agent",
             description="Write an email.",
             agent=email_graph,
+        ),
+        LangGraphAgent(
+            name="pirate_agent",
+            description="Speak like a pirate.",
+            agent=pirate_graph,
         )
     ],
 )

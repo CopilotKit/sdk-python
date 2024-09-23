@@ -2,6 +2,7 @@
 
 from typing import Optional, List, Callable, Any, cast, Union
 import uuid
+import json
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.schema import BaseMessage, SystemMessage
@@ -142,13 +143,13 @@ class LangGraphAgent(Agent):
             current_node_name = event.get("name")
             event_type = event.get("event")
             run_id = event.get("run_id")
-            tags = event.get("tags", [])
             metadata = event.get("metadata", {})
 
-            should_exit = should_exit or "copilotkit:exit" in tags
+            should_exit = should_exit or metadata.get("copilotkit:exit", False)
 
             emit_intermediate_state = metadata.get("copilotkit:emit-intermediate-state")
-            force_emit_intermediate_state = "copilotkit:force-emit-intermediate-state" in tags
+            force_emit_intermediate_state = metadata.get("copilotkit:force-emit-intermediate-state", False) # pylint: disable=line-too-long
+            manually_emit_message = metadata.get("copilotkit:manually-emit-message", False)
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
@@ -171,6 +172,18 @@ class LangGraphAgent(Agent):
                         state=state,
                         running=True,
                         active=True
+                    ) + "\n"
+                continue
+
+            if manually_emit_message:
+                if event_type == "on_chain_end":
+                    yield json.dumps(
+                        {
+                            "event": "on_copilotkit_emit_message",
+                            "message": cast(Any, event["data"])["output"],
+                            "message_id": str(uuid.uuid4()),
+                            "role": "assistant"
+                        }
                     ) + "\n"
                 continue
 

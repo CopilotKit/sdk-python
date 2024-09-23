@@ -54,13 +54,14 @@ def copilotkit_customize_config(
     """
     Configure for LangChain for use in CopilotKit
     """
-    tags = base_config.get("tags", []) if base_config else []
     metadata = base_config.get("metadata", {}) if base_config else {}
 
-    if emit_tool_calls or emit_all:
-        tags.append("copilotkit:emit-tool-calls")
-    if emit_messages or emit_all:
-        tags.append("copilotkit:emit-messages")
+    if emit_all:
+        metadata["copilotkit:emit-tool-calls"] = True
+        metadata["copilotkit:emit-messages"] = True
+    else:
+        metadata["copilotkit:emit-tool-calls"] = emit_tool_calls
+        metadata["copilotkit:emit-messages"] = emit_messages
 
     if emit_intermediate_state:
         metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
@@ -69,7 +70,6 @@ def copilotkit_customize_config(
 
     return {
         **base_config,
-        "tags": tags,
         "metadata": metadata
     }
 
@@ -84,7 +84,9 @@ async def copilotkit_exit(config: RunnableConfig):
     # For some reason, we need to use this workaround to get custom events to work
     # dispatch_custom_event and friends don't seem to do anything
     gen = RunnableGenerator(_exit_copilotkit_generator).with_config(
-        tags=["copilotkit:exit"],
+        metadata={
+            "copilotkit:exit": True
+        },
         callbacks=config.get(
             "callbacks", []
         ),
@@ -105,7 +107,31 @@ async def copilotkit_emit_state(state: Any, config: RunnableConfig):
     Emit CopilotKit state
     """
     gen = RunnableGenerator(_emit_copilotkit_state_generator(state)).with_config(
-        tags=["copilotkit:force-emit-intermediate-state"],
+        metadata={
+            "copilotkit:force-emit-intermediate-state": True
+        },
+        callbacks=config.get(
+            "callbacks", []
+        ),
+    )
+    async for _message in gen.astream({}):
+        pass
+
+    return True
+
+def _emit_copilotkit_message_generator(message: str):
+    async def emit_message(_message: Any): # pylint: disable=unused-argument
+        yield message
+    return emit_message
+
+async def copilotkit_emit_message(message: str, config: RunnableConfig):
+    """
+    Emit CopilotKit message
+    """
+    gen = RunnableGenerator(_emit_copilotkit_message_generator(message)).with_config(
+        metadata={
+            "copilotkit:manually-emit-message": True
+        },
         callbacks=config.get(
             "callbacks", []
         ),
