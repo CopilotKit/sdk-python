@@ -102,7 +102,7 @@ def _emit_copilotkit_state_generator(state):
     return emit_state
 
 
-async def copilotkit_emit_state(state: Any, config: RunnableConfig):
+async def copilotkit_emit_state(config: RunnableConfig, state: Any):
     """
     Emit CopilotKit state
     """
@@ -124,7 +124,7 @@ def _emit_copilotkit_message_generator(message: str):
         yield message
     return emit_message
 
-async def copilotkit_emit_message(message: str, config: RunnableConfig):
+async def copilotkit_emit_message(config: RunnableConfig, message: str):
     """
     Emit CopilotKit message
     """
