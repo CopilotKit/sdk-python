@@ -46,9 +46,9 @@ def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessag
 def copilotkit_customize_config(
         base_config: Optional[RunnableConfig] = None,
         *,
-        emit_tool_calls: bool = False,
-        emit_messages: bool = False,
-        emit_all: bool = False,
+        emit_tool_calls: Optional[bool] = None,
+        emit_messages: Optional[bool] = None,
+        emit_all: Optional[bool] = None,
         emit_intermediate_state: Optional[List[IntermediateStateConfig]] = None
     ) -> RunnableConfig:
     """
@@ -56,12 +56,14 @@ def copilotkit_customize_config(
     """
     metadata = base_config.get("metadata", {}) if base_config else {}
 
-    if emit_all:
+    if emit_all is True:
         metadata["copilotkit:emit-tool-calls"] = True
         metadata["copilotkit:emit-messages"] = True
     else:
-        metadata["copilotkit:emit-tool-calls"] = emit_tool_calls
-        metadata["copilotkit:emit-messages"] = emit_messages
+        if emit_tool_calls is not None:
+            metadata["copilotkit:emit-tool-calls"] = emit_tool_calls
+        if emit_messages is not None:
+            metadata["copilotkit:emit-messages"] = emit_messages
 
     if emit_intermediate_state:
         metadata["copilotkit:emit-intermediate-state"] = emit_intermediate_state
