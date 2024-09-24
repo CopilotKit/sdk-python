@@ -50,7 +50,13 @@ async def handler(request: Request, sdk: CopilotKitSDK):
 
     path = request.path_params.get('path')
     method = request.method
-    context = cast(CopilotKitSDKContext, {"properties": body.get("properties", {})})
+    context = cast(
+        CopilotKitSDKContext, 
+        {
+            "properties": body.get("properties", {}),
+            "frontend_url": body.get("frontendUrl", None)
+        }
+    )
 
     if method == 'POST' and path == 'info':
         return await handle_info(sdk=sdk, context=context)

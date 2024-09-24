@@ -23,6 +23,7 @@ class InfoDict(TypedDict):
 class CopilotKitSDKContext(TypedDict):
     """CopilotKit SDK Context"""
     properties: Any
+    frontend_url: Optional[str]
 
 class CopilotKitSDK:
     """CopilotKit SDK"""
