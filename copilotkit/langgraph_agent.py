@@ -7,6 +7,7 @@ from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.schema import BaseMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig, ensure_config
+from langchain_core.messages import AIMessage, ToolMessage
 
 from partialjson.json_parser import JSONParser
 
@@ -19,7 +20,8 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
         *,
         state: dict,
         messages: List[BaseMessage],
-        actions: List[Any]
+        actions: List[Any],
+        agent_name: str
     ):
     """Default merge state for LangGraph"""
     if len(messages) > 0 and isinstance(messages[0], SystemMessage):
@@ -30,8 +32,22 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
     merged_messages = state.get("messages", [])
     existing_message_ids = {message.id for message in merged_messages}
 
+    filter_tool_call_id = None
+    for message in messages:
+        if isinstance(message, AIMessage):
+            if message.tool_calls and message.tool_calls[0]["name"] == agent_name:
+                filter_tool_call_id = message.tool_calls[0]["id"]
+
     for message in messages:
         if message.id not in existing_message_ids:
+
+            # filter tool calls to the agent itself
+            if filter_tool_call_id:
+                if isinstance(message, AIMessage) and message.id == filter_tool_call_id:
+                    continue
+                if isinstance(message, ToolMessage) and message.tool_call_id == filter_tool_call_id:
+                    continue
+
             merged_messages.append(message)
 
     return {
@@ -106,7 +122,8 @@ class LangGraphAgent(Agent):
         state = cast(Callable, self.merge_state)(
             state=state,
             messages=langchain_messages,
-            actions=actions
+            actions=actions,
+            agent_name=self.name
         )
 
         mode = "continue" if thread_id and node_name != "__end__" else "start"
