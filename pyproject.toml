@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "copilotkit"
-version = "0.1.18"
+version = "0.1.19"
 description = "CopilotKit python SDK"
 authors = ["Markus Ecker <markus.ecker@gmail.com>"]
 license = "MIT"
@@ -25,4 +25,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-demo = "copilotkit.demos.qa.demo:main"
+demo = "copilotkit.demos.wait_user_input.demo:main"

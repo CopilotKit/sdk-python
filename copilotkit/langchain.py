@@ -2,7 +2,9 @@
 LangChain specific utilities for CopilotKit
 """
 
-from typing import List, Optional, Any
+
+from typing import List, Optional, Any, Union
+
 from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
@@ -46,7 +48,7 @@ def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessag
 def copilotkit_customize_config(
         base_config: Optional[RunnableConfig] = None,
         *,
-        emit_tool_calls: Optional[bool] = None,
+        emit_tool_calls: Optional[Union[bool, str, List[str]]] = None,
         emit_messages: Optional[bool] = None,
         emit_all: Optional[bool] = None,
         emit_intermediate_state: Optional[List[IntermediateStateConfig]] = None
