@@ -2,8 +2,8 @@
 LangChain specific utilities for CopilotKit
 """
 
-
-from typing import List, Optional, Any, Union
+import uuid
+from typing import List, Optional, Any, Union, Dict
 
 from langchain_core.messages import (
     HumanMessage,
@@ -135,6 +135,32 @@ async def copilotkit_emit_message(config: RunnableConfig, message: str):
     gen = RunnableGenerator(_emit_copilotkit_message_generator(message)).with_config(
         metadata={
             "copilotkit:manually-emit-message": True
+        },
+        callbacks=config.get(
+            "callbacks", []
+        ),
+    )
+    async for _message in gen.astream({}):
+        pass
+
+    return True
+
+def _emit_copilotkit_tool_call_generator(name: str, args: Dict[str, Any]):
+    async def emit_tool_call(_tool_call: Any): # pylint: disable=unused-argument
+        yield {
+            "name": name,
+            "args": args,
+            "id": str(uuid.uuid4())
+        }
+    return emit_tool_call
+
+async def copilotkit_emit_tool_call(config: RunnableConfig, *, name: str, args: Dict[str, Any]):
+    """
+    Emit CopilotKit tool call
+    """
+    gen = RunnableGenerator(_emit_copilotkit_tool_call_generator(name, args)).with_config(
+        metadata={
+            "copilotkit:manually-emit-tool-call": True
         },
         callbacks=config.get(
             "callbacks", []

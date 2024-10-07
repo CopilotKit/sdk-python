@@ -171,6 +171,7 @@ class LangGraphAgent(Agent):
             emit_intermediate_state = metadata.get("copilotkit:emit-intermediate-state")
             force_emit_intermediate_state = metadata.get("copilotkit:force-emit-intermediate-state", False) # pylint: disable=line-too-long
             manually_emit_message = metadata.get("copilotkit:manually-emit-message", False)
+            manually_emit_tool_call = metadata.get("copilotkit:manually-emit-tool-call", False)
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
@@ -204,6 +205,18 @@ class LangGraphAgent(Agent):
                             "message": cast(Any, event["data"])["output"],
                             "message_id": str(uuid.uuid4()),
                             "role": "assistant"
+                        }
+                    ) + "\n"
+                continue
+
+            if manually_emit_tool_call:
+                if event_type == "on_chain_end":
+                    yield json.dumps(
+                        {
+                            "event": "on_copilotkit_emit_tool_call",
+                            "name": cast(Any, event["data"])["output"]["name"],
+                            "args": cast(Any, event["data"])["output"]["args"],
+                            "id": cast(Any, event["data"])["output"]["id"]
                         }
                     ) + "\n"
                 continue
