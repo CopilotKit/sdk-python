@@ -27,10 +27,16 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
     if len(messages) > 0 and isinstance(messages[0], SystemMessage):
         # remove system message
         messages = messages[1:]
+    
 
     # merge with existing messages
     merged_messages = state.get("messages", [])
     existing_message_ids = {message.id for message in merged_messages}
+    existing_tool_call_results = set()
+
+    for message in merged_messages:
+        if isinstance(message, ToolMessage):
+            existing_tool_call_results.add(message.tool_call_id)
 
     filter_tool_call_id = None
     for message in messages:
@@ -45,7 +51,15 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
                 continue
             if isinstance(message, ToolMessage) and message.tool_call_id == filter_tool_call_id:
                 continue
+
         if message.id not in existing_message_ids:
+
+            # skip duplicate tool call results
+            if (isinstance(message, ToolMessage) and 
+                message.tool_call_id in existing_tool_call_results):
+                print("Warning: Duplicate tool call result, skipping:", message.tool_call_id)
+                continue
+
             merged_messages.append(message)
         else:
             # Replace the message with the existing one
