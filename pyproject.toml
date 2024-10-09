@@ -19,6 +19,7 @@ langchain-openai = "^0.2.1"
 langchain-anthropic = "^0.2.1"
 partialjson = "^0.0.8"
 langgraph-sdk = "^0.1.32"
+toml = "^0.10.2"
 
 [build-system]
 requires = ["poetry-core"]

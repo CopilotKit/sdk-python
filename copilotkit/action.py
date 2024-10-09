@@ -2,7 +2,7 @@
 
 
 from inspect import iscoroutinefunction
-from typing import Optional, List, Callable, TypedDict, Any, Dict, cast
+from typing import Optional, List, Callable, TypedDict, Any, cast
 from .parameter import Parameter, normalize_parameters
 
 class ActionDict(TypedDict):

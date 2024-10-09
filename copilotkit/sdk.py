@@ -2,6 +2,7 @@
 
 from pprint import pformat
 from typing import List, Callable, Union, Optional, TypedDict, Any, Coroutine
+import toml
 from .agent import Agent, AgentDict
 from .action import Action, ActionDict, ActionResultDict
 from .types import Message
@@ -13,10 +14,18 @@ from .exc import (
 )
 from .logging import get_logger, bold
 
+def _get_version():
+    with open("pyproject.toml", "r", encoding="utf-8") as f:
+        pyproject_data = toml.load(f)
+    return pyproject_data["tool"]["poetry"]["version"]
+
+COPILOTKIT_SDK_VERSION = _get_version()
+
 logger = get_logger(__name__)
 
 class InfoDict(TypedDict):
     """Info dictionary"""
+    sdkVersion: str
     actions: List[ActionDict]
     agents: List[AgentDict]
 
@@ -72,7 +81,8 @@ class CopilotKitSDK:
 
         return {
             "actions": actions_list,
-            "agents": agents_list
+            "agents": agents_list,
+            "sdkVersion": COPILOTKIT_SDK_VERSION
         }
 
     def _get_action(
