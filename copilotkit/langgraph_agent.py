@@ -15,6 +15,9 @@ from .types import Message
 from .langchain import copilotkit_messages_to_langchain
 from .action import ActionDict
 from .agent import Agent
+from .logging import get_logger
+
+logger = get_logger(__name__)
 
 def langgraph_default_merge_state( # pylint: disable=unused-argument
         *,
@@ -27,7 +30,7 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
     if len(messages) > 0 and isinstance(messages[0], SystemMessage):
         # remove system message
         messages = messages[1:]
-    
+
 
     # merge with existing messages
     merged_messages = state.get("messages", [])
@@ -55,9 +58,12 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
         if message.id not in existing_message_ids:
 
             # skip duplicate tool call results
-            if (isinstance(message, ToolMessage) and 
+            if (isinstance(message, ToolMessage) and
                 message.tool_call_id in existing_tool_call_results):
-                print("Warning: Duplicate tool call result, skipping:", message.tool_call_id)
+                logger.warning(
+                    "Warning: Duplicate tool call result, skipping: %s",
+                    message.tool_call_id
+                )
                 continue
 
             merged_messages.append(message)
