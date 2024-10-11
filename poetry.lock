@@ -842,19 +842,19 @@ files = [
 
 [[package]]
 name = "langchain"
-version = "0.3.1"
+version = "0.3.3"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langchain-0.3.1-py3-none-any.whl", hash = "sha256:94e5ee7464d4366e4b158aa5704953c39701ea237b9ed4b200096d49e83bb3ae"},
-    {file = "langchain-0.3.1.tar.gz", hash = "sha256:54d6e3abda2ec056875a231a418a4130ba7576e629e899067e499bfc847b7586"},
+    {file = "langchain-0.3.3-py3-none-any.whl", hash = "sha256:05ac98c674853c2386d043172820e37ceac9b913aaaf1e51217f0fc424112c72"},
+    {file = "langchain-0.3.3.tar.gz", hash = "sha256:6435882996a029a60c61c356bbe51bab4a8f43a54210f5f03e3c4474d19d1842"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
-langchain-core = ">=0.3.6,<0.4.0"
+langchain-core = ">=0.3.10,<0.4.0"
 langchain-text-splitters = ">=0.3.0,<0.4.0"
 langsmith = ">=0.1.17,<0.2.0"
 numpy = [
@@ -869,30 +869,30 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-anthropic"
-version = "0.2.1"
+version = "0.2.3"
 description = "An integration package connecting AnthropicMessages and LangChain"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langchain_anthropic-0.2.1-py3-none-any.whl", hash = "sha256:fb3e6cc7f7da323326d37ab4d021bdd2e13ce546192fdfa0ae4fcee38e68b1f4"},
-    {file = "langchain_anthropic-0.2.1.tar.gz", hash = "sha256:acc1113274284ccbce708a44b7a154abe282da04df2cdb9bfdad4b1ff34f9ea5"},
+    {file = "langchain_anthropic-0.2.3-py3-none-any.whl", hash = "sha256:d555901865074b1481a0fbd40505eedaa3b414af25f6b227c39f2a6529ce1800"},
+    {file = "langchain_anthropic-0.2.3.tar.gz", hash = "sha256:29d3464bf276ff6444543be94a9ba555a8f8ef858df3ace82ce8dfc7fedb0bec"},
 ]
 
 [package.dependencies]
 anthropic = ">=0.30.0,<1"
 defusedxml = ">=0.7.1,<0.8.0"
-langchain-core = ">=0.3.1,<0.4.0"
+langchain-core = ">=0.3.9,<0.4.0"
 pydantic = ">=2.7.4,<3.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.3.8"
+version = "0.3.10"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langchain_core-0.3.8-py3-none-any.whl", hash = "sha256:07015f7b1d9f52eefe05130e8cafe4dcbdbbf72a8411c9edafe38422e4d11b5c"},
-    {file = "langchain_core-0.3.8.tar.gz", hash = "sha256:7485904f7082f1df880d5ae470a488161616132f30d99f556a1877901fffd1cb"},
+    {file = "langchain_core-0.3.10-py3-none-any.whl", hash = "sha256:146be6bf2d3dc0d6f4feb46ef082182cf57b056e8163d45278529cd7b7343d2f"},
+    {file = "langchain_core-0.3.10.tar.gz", hash = "sha256:63b9a3d03b52dba29cc248b752c574cdcb5fb04bd0fc5c76097fcbb7aaba5221"},
 ]
 
 [package.dependencies]
@@ -909,17 +909,17 @@ typing-extensions = ">=4.7"
 
 [[package]]
 name = "langchain-openai"
-version = "0.2.1"
+version = "0.2.2"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "langchain_openai-0.2.1-py3-none-any.whl", hash = "sha256:215efa4526c88f8105f002b43b7cbf98cebd9baeb4f62c3b58faebdb578715bc"},
-    {file = "langchain_openai-0.2.1.tar.gz", hash = "sha256:a131ea18736f1a8792925391b91a8c8bd834431ffc2055c92ba49f59c3dcaaf0"},
+    {file = "langchain_openai-0.2.2-py3-none-any.whl", hash = "sha256:3a203228cb38e4711ebd8c0a3bd51854e447f1d017e8475b6467b07ce7dd3e88"},
+    {file = "langchain_openai-0.2.2.tar.gz", hash = "sha256:9ae8e2ec7d1ca84fd3bfa82186724528d68e1510a1dc9cdf617a7c669b7a7768"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.3,<0.4"
+langchain-core = ">=0.3.9,<0.4.0"
 openai = ">=1.40.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
@@ -939,13 +939,13 @@ langchain-core = ">=0.3.0,<0.4.0"
 
 [[package]]
 name = "langgraph"
-version = "0.2.34"
+version = "0.2.35"
 description = "Building stateful, multi-actor applications with LLMs"
 optional = false
 python-versions = "<4.0,>=3.9.0"
 files = [
-    {file = "langgraph-0.2.34-py3-none-any.whl", hash = "sha256:93727158769f3dfad7cc5440405fca5a8cba77f79cbc0928b97f4341e561556f"},
-    {file = "langgraph-0.2.34.tar.gz", hash = "sha256:2a7f94d9a2cabbd13e09db6bd87aa99548e98613c4fe762329088b17138cec15"},
+    {file = "langgraph-0.2.35-py3-none-any.whl", hash = "sha256:e9dfa85f05bee25b732f7e9ee26f8fc127e937d531762042c83d6c13f39898a3"},
+    {file = "langgraph-0.2.35.tar.gz", hash = "sha256:707752f99c887570a797373584c7412f8c1d23dc6980b3e43e3341aa6122aca9"},
 ]
 
 [package.dependencies]
@@ -2129,4 +2129,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "92649526f4285e6189a067d206cb7811c6a3acca1cf08d2bd2209a3bb716828e"
+content-hash = "2bf8dce19b7733105fbbd14bac5903c4f2201995bb8bcadaa190985725922661"
