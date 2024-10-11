@@ -3,6 +3,7 @@
 from pprint import pformat
 from typing import List, Callable, Union, Optional, TypedDict, Any, Coroutine
 import toml
+import os
 from .agent import Agent, AgentDict
 from .action import Action, ActionDict, ActionResultDict
 from .types import Message
@@ -15,7 +16,9 @@ from .exc import (
 from .logging import get_logger, bold
 
 def _get_version():
-    with open("pyproject.toml", "r", encoding="utf-8") as f:
+    # Construct the path to the pyproject.toml file one level up
+    pyproject_path = os.path.join(os.path.dirname(__file__), '..', 'pyproject.toml')
+    with open(pyproject_path, "r", encoding="utf-8") as f:
         pyproject_data = toml.load(f)
     return pyproject_data["tool"]["poetry"]["version"]
 
