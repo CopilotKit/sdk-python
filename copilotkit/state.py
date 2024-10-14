@@ -1,7 +1,12 @@
 """CopilotKit state"""
 
-from typing import TypedDict, List, Any
+from typing import List, Any, TypedDict
+from langgraph.graph import MessagesState
 
-class CopilotKitState(TypedDict):
+class CopilotKitProperties(TypedDict):
     """CopilotKit state"""
     actions: List[Any]
+
+class CopilotKitState(MessagesState):
+    """CopilotKit state"""
+    copilotkit: CopilotKitProperties
