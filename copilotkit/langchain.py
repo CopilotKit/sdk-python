@@ -3,6 +3,7 @@ LangChain specific utilities for CopilotKit
 """
 
 import uuid
+import json
 from typing import List, Optional, Any, Union, Dict
 
 from langchain_core.messages import (
@@ -35,7 +36,20 @@ def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessag
                 "args": message["arguments"],
                 "id": message["id"],
             }
-            result.append(AIMessage(id=message["id"], content="", tool_calls=[tool_call]))           
+            additional_kwargs = {
+                'function_call':{
+                    'name': message["name"],
+                    'arguments': json.dumps(message["arguments"]),
+                }
+            }
+            result.append(
+                AIMessage(
+                    id=message["id"],
+                    content="",
+                    tool_calls=[tool_call],
+                    additional_kwargs=additional_kwargs
+                )
+            )
         elif "actionExecutionId" in message:
             result.append(ToolMessage(
                 id=message["id"],
