@@ -1,6 +1,6 @@
 """Agents"""
 
-from typing import Optional, List, TypedDict, Callable
+from typing import Optional, List, TypedDict
 from abc import ABC, abstractmethod
 from .types import Message
 from .action import ActionDict
@@ -17,11 +17,9 @@ class Agent(ABC):
             *,
             name: str,
             description: Optional[str] = None,
-            merge_state: Optional[Callable] = None
         ):
         self.name = name
         self.description = description
-        self.merge_state = merge_state
 
     @abstractmethod
     def execute( # pylint: disable=too-many-arguments

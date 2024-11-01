@@ -6,7 +6,9 @@ from langgraph.graph import MessagesState
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage, ToolMessage, AIMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
+
 from pydantic import BaseModel, Field
 
 from copilotkit.langchain import (
@@ -19,7 +21,8 @@ def get_model():
     Get a model based on the environment variable.
     """
     # model = os.getenv("MODEL", "openai")
-    return ChatGoogleGenerativeAI(temperature=0, model="gemini-1.5-pro")
+    return ChatOpenAI(temperature=0, model="gpt-4o")
+    # return ChatGoogleGenerativeAI(temperature=0, model="gemini-1.5-pro")
 
 
     # if model == "openai":
