@@ -98,6 +98,11 @@ async def chat_node(state: AgentState, config: RunnableConfig):
 
     ai_message = cast(AIMessage, response)
 
+    # print("AI MESSAGE")
+    # print("-----------")
+    # print(ai_message)
+    # print("-----------")
+
     if ai_message.tool_calls:
         if ai_message.tool_calls[0]["name"] == "WriteReport":
             return {

@@ -1,5 +1,6 @@
 """Delete Resources"""
 
+import json
 from typing import cast
 from copilotkit.demos.research_canvas.state import AgentState
 from langchain_core.runnables import RunnableConfig
@@ -14,10 +15,19 @@ async def perform_delete_node(state: AgentState, config: RunnableConfig): # pyli
     """
     Perform Delete Node
     """
+    # print("MESSAGES")
+    # print("--------")
+    # for message in state["messages"]:
+    #     print(message)
+    # print("--------")
     ai_message = cast(AIMessage, state["messages"][-2])
     tool_message = cast(ToolMessage, state["messages"][-1])
     if tool_message.content == "YES":
-        urls = ai_message.tool_calls[0]["args"]["urls"]
+        if ai_message.tool_calls:
+            urls = ai_message.tool_calls[0]["args"]["urls"]
+        else:
+            parsed_tool_call = json.loads(ai_message.additional_kwargs["function_call"]["arguments"])
+            urls = parsed_tool_call["urls"]
         state["resources"] = [
             resource for resource in state["resources"] if resource["url"] not in urls
         ]

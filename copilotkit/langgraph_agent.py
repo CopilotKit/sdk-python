@@ -94,7 +94,11 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
             isinstance(merged_messages[i], AIMessage) and
             isinstance(merged_messages[i + 1], AIMessage)):
 
-            if merged_messages[i].content == merged_messages[i + 1].content:
+            if not merged_messages[i].content == merged_messages[i + 1].content:
+
+                if merged_messages[i].tool_calls or merged_messages[i + 1].tool_calls:
+                    tool_calls = merged_messages[i].tool_calls or merged_messages[i + 1].tool_calls
+                    merged_messages[i].tool_calls = tool_calls
                 # Skip the next message
                 i += 1
 
