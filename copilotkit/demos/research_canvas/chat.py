@@ -51,11 +51,6 @@ async def chat_node(state: AgentState, config: RunnableConfig):
 
     resources = []
 
-    print("++++++++++++++++++++++++++++++++")
-    for message in state["messages"]:
-        print(message)
-    print("++++++++++++++++++++++++++++++++")
-
     for resource in state["resources"]:
         content = get_resource(resource["url"])
         if content == "ERROR":
@@ -65,14 +60,20 @@ async def chat_node(state: AgentState, config: RunnableConfig):
             "content": content
         })
 
-    response = await get_model(state).bind_tools(
+    model = get_model(state)
+    # Prepare the kwargs for the ainvoke method
+    ainvoke_kwargs = {}
+    if model.__class__.__name__ in ["ChatOpenAI"]:
+        ainvoke_kwargs["parallel_tool_calls"] = False
+
+    response = await model.bind_tools(
         [
-            Search,
             Search,
             WriteReport,
             WriteResearchQuestion,
             DeleteResources,
         ],
+        **ainvoke_kwargs
     ).ainvoke([
         SystemMessage(
             content=f"""

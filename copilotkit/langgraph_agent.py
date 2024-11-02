@@ -81,9 +81,29 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
                     merged_messages[i] = message
 
 
+    # TODO: This is a temporary fix for the duplicate messages issue.
+    filtered_messages = []
+
+    i = 0
+    while i < len(merged_messages):
+        # Add the current message to the filtered list
+        filtered_messages.append(merged_messages[i])
+
+        # Check if there is a next message and if both are AIMessage instances with the same content
+        if (i < len(merged_messages) - 1 and
+            isinstance(merged_messages[i], AIMessage) and
+            isinstance(merged_messages[i + 1], AIMessage)):
+
+            if merged_messages[i].content == merged_messages[i + 1].content:
+                # Skip the next message
+                i += 1
+
+        i += 1
+
+
     return {
         **state,
-        "messages": merged_messages,
+        "messages": filtered_messages,
         "copilotkit": {
             "actions": actions
         }
