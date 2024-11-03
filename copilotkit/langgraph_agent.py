@@ -78,36 +78,35 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
             # Replace the message with the existing one
             for i, existing_message in enumerate(merged_messages):
                 if existing_message.id == message.id:
+                    # if the message is an AIMessage, we need to merge
+                    # the tool calls and additional kwargs
+                    if isinstance(message, AIMessage):
+                        if (
+                            (merged_messages[i].tool_calls or
+                             merged_messages[i].additional_kwargs) and
+                            merged_messages[i].content
+                        ):
+                            message.tool_calls = merged_messages[i].tool_calls
+                            message.additional_kwargs = merged_messages[i].additional_kwargs
                     merged_messages[i] = message
 
+    # fix wrong tool call ids
+    for i, current_message in enumerate(merged_messages):
+        if i == len(merged_messages) - 1:
+            break
+        next_message = merged_messages[i + 1]
+        if (not isinstance(current_message, AIMessage) or
+            not isinstance(next_message, ToolMessage)):
+            continue
 
-    # TODO: This is a temporary fix for the duplicate messages issue.
-    filtered_messages = []
+        if current_message.tool_calls and current_message.tool_calls[0]["id"]:
+            next_message.tool_call_id = current_message.tool_calls[0]["id"]
 
-    i = 0
-    while i < len(merged_messages):
-        # Add the current message to the filtered list
-        filtered_messages.append(merged_messages[i])
-
-        # Check if there is a next message and if both are AIMessage instances with the same content
-        if (i < len(merged_messages) - 1 and
-            isinstance(merged_messages[i], AIMessage) and
-            isinstance(merged_messages[i + 1], AIMessage)):
-
-            if not merged_messages[i].content == merged_messages[i + 1].content:
-
-                if merged_messages[i].tool_calls or merged_messages[i + 1].tool_calls:
-                    tool_calls = merged_messages[i].tool_calls or merged_messages[i + 1].tool_calls
-                    merged_messages[i].tool_calls = tool_calls
-                # Skip the next message
-                i += 1
-
-        i += 1
 
 
     return {
         **state,
-        "messages": filtered_messages,
+        "messages": merged_messages,
         "copilotkit": {
             "actions": actions
         }

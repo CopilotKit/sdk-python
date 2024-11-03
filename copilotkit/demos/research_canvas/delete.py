@@ -2,9 +2,10 @@
 
 import json
 from typing import cast
-from copilotkit.demos.research_canvas.state import AgentState
 from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import ToolMessage, AIMessage
+from copilotkit.demos.research_canvas.state import AgentState
+
 async def delete_node(state: AgentState, config: RunnableConfig): # pylint: disable=unused-argument
     """
     Delete Node
@@ -15,11 +16,6 @@ async def perform_delete_node(state: AgentState, config: RunnableConfig): # pyli
     """
     Perform Delete Node
     """
-    # print("MESSAGES")
-    # print("--------")
-    # for message in state["messages"]:
-    #     print(message)
-    # print("--------")
     ai_message = cast(AIMessage, state["messages"][-2])
     tool_message = cast(ToolMessage, state["messages"][-1])
     if tool_message.content == "YES":

@@ -1,7 +1,7 @@
 """Demo"""
 
 import os
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
 load_dotenv()
 
 # pylint: disable=wrong-import-position
@@ -10,7 +10,7 @@ import uvicorn
 from copilotkit.integrations.fastapi import add_fastapi_endpoint
 from copilotkit import CopilotKitSDK, LangGraphAgent
 from copilotkit.demos.research_canvas.agent import graph
-# from copilotkit.langchain import copilotkit_messages_to_langchain
+from copilotkit.langchain import copilotkit_messages_to_langchain
 
 app = FastAPI()
 sdk = CopilotKitSDK(
@@ -19,9 +19,14 @@ sdk = CopilotKitSDK(
             name="research_agent",
             description="Research agent.",
             agent=graph,
-            # copilotkit_config={
-            #     "convert_messages": copilotkit_messages_to_langchain(use_function_call=True)
-            # }
+        ),
+        LangGraphAgent(
+            name="research_agent_google_genai",
+            description="Research agent.",
+            agent=graph,
+            copilotkit_config={
+                "convert_messages": copilotkit_messages_to_langchain(use_function_call=True)
+            }
         )
     ],
 )
