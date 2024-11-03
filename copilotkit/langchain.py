@@ -14,6 +14,7 @@ from langchain_core.messages import (
     ToolMessage
 )
 from langchain_core.runnables import RunnableConfig, RunnableGenerator
+from langgraph.errors import NodeInterrupt
 
 from .types import Message, IntermediateStateConfig
 
@@ -195,3 +196,10 @@ async def copilotkit_emit_tool_call(config: RunnableConfig, *, name: str, args: 
         pass
 
     return True
+
+
+def human_in_the_loop(state: Any):
+    """
+    Dynamically interrupt LangGraph to allow for human in the loop
+    """
+    raise NodeInterrupt("Human in the loop")

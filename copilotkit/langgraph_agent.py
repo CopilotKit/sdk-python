@@ -6,6 +6,7 @@ from typing import Optional, List, Callable, Any, cast, Union, TypedDict
 from typing_extensions import NotRequired
 
 from langgraph.graph.graph import CompiledGraph
+from langgraph.types import PregelTask
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.schema import BaseMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig, ensure_config
@@ -353,6 +354,13 @@ class LangGraphAgent(Agent):
         is_end_node = state.next == ()
 
         node_name = list(state.metadata["writes"].keys())[0]
+
+        # in case of a programmatic interrupt, set the node name the node that
+        # raised the interrupt
+        if (len(state.tasks) > 0 and
+            isinstance(state.tasks[0], PregelTask) and
+            len(state.tasks[0].path) > 0):
+            node_name = state.tasks[0].path[-1]
 
         yield self._emit_state_sync_event(
             thread_id=thread_id,
