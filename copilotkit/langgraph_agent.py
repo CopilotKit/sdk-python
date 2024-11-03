@@ -48,19 +48,21 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
         if isinstance(message, ToolMessage):
             existing_tool_call_results.add(message.tool_call_id)
 
-    filter_tool_call_id = None
     for message in messages:
-        if isinstance(message, AIMessage):
-            if message.tool_calls and message.tool_calls[0]["name"] == agent_name:
-                filter_tool_call_id = message.tool_calls[0]["id"]
+        # filter tool calls to activate the agent itself
+        if (
+            isinstance(message, AIMessage) and
+            message.tool_calls and
+            message.tool_calls[0]["name"] == agent_name
+        ):
+            continue
 
-    for message in messages:
-        # filter tool calls to the agent itself
-        if filter_tool_call_id:
-            if isinstance(message, AIMessage) and message.id == filter_tool_call_id:
-                continue
-            if isinstance(message, ToolMessage) and message.tool_call_id == filter_tool_call_id:
-                continue
+        # filter results from activating the agent
+        if (
+            isinstance(message, ToolMessage) and
+            message.name == agent_name
+        ):
+            continue
 
         if message.id not in existing_message_ids:
 
