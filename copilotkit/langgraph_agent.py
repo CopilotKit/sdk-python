@@ -1,7 +1,6 @@
 """LangGraph agent for CopilotKit"""
 
 import uuid
-import json
 from typing import Optional, List, Callable, Any, cast, Union, TypedDict
 from typing_extensions import NotRequired
 
