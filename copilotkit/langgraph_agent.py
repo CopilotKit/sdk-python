@@ -1,7 +1,10 @@
 """LangGraph agent for CopilotKit"""
 
-from typing import Optional, List, Callable, Any, cast, Union
 import uuid
+import json
+from typing import Optional, List, Callable, Any, cast, Union, TypedDict
+from typing_extensions import NotRequired
+
 from langgraph.graph.graph import CompiledGraph
 from langchain.load.dump import dumps as langchain_dumps
 from langchain.schema import BaseMessage, SystemMessage
@@ -17,6 +20,11 @@ from .agent import Agent
 from .logging import get_logger
 
 logger = get_logger(__name__)
+
+class CopilotKitConfig(TypedDict):
+    """CopilotKit config"""
+    merge_state: NotRequired[Callable]
+    convert_messages: NotRequired[Callable]
 
 def langgraph_default_merge_state( # pylint: disable=unused-argument
         *,
@@ -40,19 +48,21 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
         if isinstance(message, ToolMessage):
             existing_tool_call_results.add(message.tool_call_id)
 
-    filter_tool_call_id = None
     for message in messages:
-        if isinstance(message, AIMessage):
-            if message.tool_calls and message.tool_calls[0]["name"] == agent_name:
-                filter_tool_call_id = message.tool_calls[0]["id"]
+        # filter tool calls to activate the agent itself
+        if (
+            isinstance(message, AIMessage) and
+            message.tool_calls and
+            message.tool_calls[0]["name"] == agent_name
+        ):
+            continue
 
-    for message in messages:
-        # filter tool calls to the agent itself
-        if filter_tool_call_id:
-            if isinstance(message, AIMessage) and message.id == filter_tool_call_id:
-                continue
-            if isinstance(message, ToolMessage) and message.tool_call_id == filter_tool_call_id:
-                continue
+        # filter results from activating the agent
+        if (
+            isinstance(message, ToolMessage) and
+            message.name == agent_name
+        ):
+            continue
 
         if message.id not in existing_message_ids:
 
@@ -70,7 +80,30 @@ def langgraph_default_merge_state( # pylint: disable=unused-argument
             # Replace the message with the existing one
             for i, existing_message in enumerate(merged_messages):
                 if existing_message.id == message.id:
+                    # if the message is an AIMessage, we need to merge
+                    # the tool calls and additional kwargs
+                    if isinstance(message, AIMessage):
+                        if (
+                            (merged_messages[i].tool_calls or
+                             merged_messages[i].additional_kwargs) and
+                            merged_messages[i].content
+                        ):
+                            message.tool_calls = merged_messages[i].tool_calls
+                            message.additional_kwargs = merged_messages[i].additional_kwargs
                     merged_messages[i] = message
+
+    # fix wrong tool call ids
+    for i, current_message in enumerate(merged_messages):
+        if i == len(merged_messages) - 1:
+            break
+        next_message = merged_messages[i + 1]
+        if (not isinstance(current_message, AIMessage) or
+            not isinstance(next_message, ToolMessage)):
+            continue
+
+        if current_message.tool_calls and current_message.tool_calls[0]["id"]:
+            next_message.tool_call_id = current_message.tool_calls[0]["id"]
+
 
 
     return {
@@ -87,18 +120,54 @@ class LangGraphAgent(Agent):
             self,
             *,
             name: str,
-            agent: CompiledGraph,
             description: Optional[str] = None,
-            merge_state: Optional[Callable] = langgraph_default_merge_state,
-            config: Union[Optional[RunnableConfig], dict] = None
+            graph: Optional[CompiledGraph] = None,
+            langgraph_config:  Union[Optional[RunnableConfig], dict] = None,
+            copilotkit_config: Optional[CopilotKitConfig] = None,
+
+            # deprecated - use langgraph_config instead
+            config: Union[Optional[RunnableConfig], dict] = None,
+            # deprecated - use graph instead
+            agent: Optional[CompiledGraph] = None,
+            # deprecated - use copilotkit_config instead
+            merge_state: Optional[Callable] = None,
+
         ):
+        if config is not None:
+            logger.warning("Warning: config is deprecated, use langgraph_config instead")
+
+        if agent is not None:
+            logger.warning("Warning: agent is deprecated, use graph instead")
+
+        if merge_state is None:
+            logger.warning("Warning: merge_state is deprecated, use copilotkit_config instead")
+        
+        if graph is None and agent is None:
+            raise ValueError("graph must be provided")
+
         super().__init__(
             name=name,
             description=description,
-            merge_state=merge_state
         )
-        self.agent = agent
-        self.config = config
+
+        self.merge_state = None
+
+        if copilotkit_config is not None:
+            self.merge_state = copilotkit_config.get("merge_state")
+        if not self.merge_state and merge_state is not None:
+            self.merge_state = merge_state
+        if not self.merge_state:
+            self.merge_state = langgraph_default_merge_state
+
+        self.convert_messages = (
+            copilotkit_config.get("convert_messages")
+            if copilotkit_config
+            else None
+        ) or copilotkit_messages_to_langchain(use_function_call=False)
+
+        self.langgraph_config = langgraph_config or config
+
+        self.graph = cast(CompiledGraph, graph or agent)
 
     def _emit_state_sync_event(
             self,
@@ -134,14 +203,14 @@ class LangGraphAgent(Agent):
         node_name: Optional[str] = None,
         actions: Optional[List[ActionDict]] = None,
     ):
-        config = ensure_config(cast(Any, self.config.copy()) if self.config else {})
+        config = ensure_config(cast(Any, self.langgraph_config.copy()) if self.langgraph_config else {}) # pylint: disable=line-too-long
         config["configurable"] = config.get("configurable", {})
         config["configurable"]["thread_id"] = thread_id
 
-        agent_state = self.agent.get_state(config)
+        agent_state = self.graph.get_state(config)
         state["messages"] = agent_state.values.get("messages", [])
 
-        langchain_messages = copilotkit_messages_to_langchain(messages)
+        langchain_messages = self.convert_messages(messages)
         state = cast(Callable, self.merge_state)(
             state=state,
             messages=langchain_messages,
@@ -154,7 +223,7 @@ class LangGraphAgent(Agent):
         config["configurable"]["thread_id"] = thread_id
 
         if mode == "continue":
-            self.agent.update_state(config, state, as_node=node_name)
+            self.graph.update_state(config, state, as_node=node_name)
 
         return self._stream_events(
             mode=mode,
@@ -179,7 +248,7 @@ class LangGraphAgent(Agent):
         should_exit = False
         thread_id = cast(Any, config)["configurable"]["thread_id"]
 
-        async for event in self.agent.astream_events(initial_state, config, version="v2"):
+        async for event in self.graph.astream_events(initial_state, config, version="v2"):
             current_node_name = event.get("name")
             event_type = event.get("event")
             run_id = event.get("run_id")
@@ -198,7 +267,7 @@ class LangGraphAgent(Agent):
 
             # we only want to update the node name under certain conditions
             # since we don't need any internal node names to be sent to the frontend
-            if current_node_name in self.agent.nodes.keys():
+            if current_node_name in self.graph.nodes.keys():
                 node_name = current_node_name
 
             # we don't have a node name yet, so we can't update the state
@@ -226,7 +295,7 @@ class LangGraphAgent(Agent):
                 # reset the streaming state extractor
                 streaming_state_extractor = _StreamingStateExtractor(emit_intermediate_state)
 
-            updated_state = self.agent.get_state(config).values
+            updated_state = self.graph.get_state(config).values
 
             if emit_intermediate_state and event_type == "on_chat_model_stream":
                 streaming_state_extractor.buffer_tool_calls(event)
@@ -261,7 +330,7 @@ class LangGraphAgent(Agent):
 
             yield langchain_dumps(event) + "\n"
 
-        state = self.agent.get_state(config)
+        state = self.graph.get_state(config)
         is_end_node = state.next == ()
 
         node_name = list(state.metadata["writes"].keys())[0]

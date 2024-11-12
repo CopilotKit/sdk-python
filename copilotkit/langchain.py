@@ -3,7 +3,8 @@ LangChain specific utilities for CopilotKit
 """
 
 import uuid
-from typing import List, Optional, Any, Union, Dict
+import json
+from typing import List, Optional, Any, Union, Dict, Callable
 
 from langchain_core.messages import (
     HumanMessage,
@@ -17,34 +18,58 @@ from langchain_core.callbacks.manager import adispatch_custom_event
 
 from .types import Message, IntermediateStateConfig
 
-def copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessage]:
+def copilotkit_messages_to_langchain(
+        use_function_call: bool = False
+    ) -> Callable[[List[Message]], List[BaseMessage]]:
     """
     Convert CopilotKit messages to LangChain messages
     """
-    result = []
-    for message in messages:
-        if "content" in message:
-            if message["role"] == "user":
-                result.append(HumanMessage(content=message["content"], id=message["id"]))
-            elif message["role"] == "system":
-                result.append(SystemMessage(content=message["content"], id=message["id"]))
-            elif message["role"] == "assistant":
-                result.append(AIMessage(content=message["content"], id=message["id"]))
-        elif "arguments" in message:
-            tool_call = {
-                "name": message["name"],
-                "args": message["arguments"],
-                "id": message["id"],
-            }
-            result.append(AIMessage(id=message["id"], content="", tool_calls=[tool_call]))           
-        elif "actionExecutionId" in message:
-            result.append(ToolMessage(
-                id=message["id"],
-                content=message["result"],
-                name=message["actionName"],
-                tool_call_id=message["actionExecutionId"]
-            ))
-    return result
+    def _copilotkit_messages_to_langchain(messages: List[Message]) -> List[BaseMessage]:
+        result = []
+        for message in messages:
+            if "content" in message:
+                if message["role"] == "user":
+                    result.append(HumanMessage(content=message["content"], id=message["id"]))
+                elif message["role"] == "system":
+                    result.append(SystemMessage(content=message["content"], id=message["id"]))
+                elif message["role"] == "assistant":
+                    result.append(AIMessage(content=message["content"], id=message["id"]))
+            elif "arguments" in message:
+                tool_call = {
+                    "name": message["name"],
+                    "args": message["arguments"],
+                    "id": message["id"],
+                }
+                additional_kwargs = {
+                    'function_call':{
+                        'name': message["name"],
+                        'arguments': json.dumps(message["arguments"]),
+                    }
+                }
+                if not use_function_call:
+                    ai_message = AIMessage(
+                        id=message["id"],
+                        content="",
+                        tool_calls=[tool_call]
+                    )
+                else:
+                    ai_message = AIMessage(
+                        id=message["id"],
+                        content="",
+                        additional_kwargs=additional_kwargs 
+                    )
+                result.append(ai_message)
+
+            elif "actionExecutionId" in message:
+                result.append(ToolMessage(
+                    id=message["id"],
+                    content=message["result"],
+                    name=message["actionName"],
+                    tool_call_id=message["actionExecutionId"]
+                ))
+        return result
+
+    return _copilotkit_messages_to_langchain
 
 def copilotkit_customize_config(
         base_config: Optional[RunnableConfig] = None,
